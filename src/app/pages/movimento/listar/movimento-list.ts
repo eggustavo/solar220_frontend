@@ -2,9 +2,10 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { MenuModule } from 'primeng/menu';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -13,7 +14,7 @@ import { TooltipModule } from 'primeng/tooltip';
 @Component({
     selector: 'app-movimento-list',
     standalone: true,
-    imports: [CommonModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule],
+    imports: [CommonModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule],
     templateUrl: './movimento-list.html',
     changeDetection: ChangeDetectionStrategy.Eager,
     providers: [ConfirmationService]
@@ -22,6 +23,8 @@ export class MovimentoList implements OnInit {
     movimentos = signal<any[]>([]);
 
     loading = signal<boolean>(false);
+
+    menuItems: MenuItem[] = [];
 
     constructor(
         private readonly movimentoService: MovimentoService,
@@ -52,6 +55,18 @@ export class MovimentoList implements OnInit {
 
     editar(movimento: any) {
         this.router.navigate(['/pages/movimentos/editar', movimento.id]);
+    }
+
+    abrirMenuAcoes(event: Event, movimento: any, menu: any) {
+        this.menuItems = [
+            { label: 'Editar', icon: 'pi pi-pencil', command: () => this.editar(movimento) },
+            { label: 'Excluir', icon: 'pi pi-trash', styleClass: 'text-red-500', command: () => this.excluir(movimento) },
+            { separator: true },
+            { label: 'Relatório Cedente', icon: 'pi pi-print', command: () => this.imprimirDemonstrativo(movimento, 1) },
+            { label: 'Relatório Beneficiário', icon: 'pi pi-file-pdf', command: () => this.imprimirDemonstrativo(movimento, 0) },
+            { label: 'Enviar por E-mail', icon: 'pi pi-envelope', command: () => this.enviarPorEmail(movimento) }
+        ];
+        menu.toggle(event);
     }
 
     imprimirDemonstrativo(movimento: any, flagCedente: number) {

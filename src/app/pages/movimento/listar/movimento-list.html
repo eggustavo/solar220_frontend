@@ -15,7 +15,7 @@
                 <th scope="col" style="width: 8rem; text-align: center">Mês/Ano Referência</th>
                 <th scope="col" style="width: 8rem; text-align: center">Faturado?</th>
                 <th scope="col" style="width: 8rem; text-align: center">Integrado?</th>
-                <th scope="col" style="width: 12rem"></th>
+                <th scope="col" style="width: 5rem">Ações</th>
             </tr>
         </ng-template>
         <ng-template #body let-movimento>
@@ -30,11 +30,7 @@
                     <p-tag [value]="movimento.flagIntegradoFinanceiro ? 'Sim' : 'Não'" [severity]="movimento.flagIntegradoFinanceiro ? 'success' : 'secondary'" />
                 </td>
                 <td>
-                    <button pButton [iconOnly]="true" severity="info" [rounded]="true" [text]="true" (click)="imprimirDemonstrativo(movimento, 1)" pTooltip="Relatório Cedente"><i class="pi pi-print"></i></button>
-                    <button pButton [iconOnly]="true" severity="info" [rounded]="true" [text]="true" (click)="imprimirDemonstrativo(movimento, 0)" pTooltip="Relatório Beneficiário"><i class="pi pi-file-pdf"></i></button>
-                    <button pButton [iconOnly]="true" severity="info" [rounded]="true" [text]="true" (click)="enviarPorEmail(movimento)" pTooltip="Enviar por E-mail"><i class="pi pi-envelope"></i></button>
-                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="editar(movimento)" pTooltip="Editar"><i class="pi pi-pencil"></i></button>
-                    <button pButton [iconOnly]="true" severity="danger" [rounded]="true" [text]="true" (click)="excluir(movimento)" pTooltip="Excluir"><i class="pi pi-trash"></i></button>
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, movimento, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
                 </td>
             </tr>
         </ng-template>
@@ -44,6 +40,7 @@
             </tr>
         </ng-template>
     </p-table>
+    <p-menu #acoesMenu [popup]="true" [model]="menuItems" appendTo="body" />
 </div>
 
 <p-confirmdialog [style]="{ width: '450px' }" />
