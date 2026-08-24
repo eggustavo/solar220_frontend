@@ -278,8 +278,6 @@ export class MovimentoForm implements OnInit {
             return;
         }
 
-        alert('Deseja realmente salvar o movimento?');
-
         this.salvando.set(true);
 
         if (this.editando()) {

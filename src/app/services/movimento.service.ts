@@ -29,4 +29,13 @@ export class MovimentoService {
     excluir(id: string): Observable<RespostaApi<any>> {
         return this.http.delete<RespostaApi<any>>(`${this.apiUrl}/excluir/${id}`);
     }
+
+    gerarDemonstrativo(movimentoId: string, flagCedente: number): Observable<Blob> {
+        return this.http.get(`${this.apiUrl}/gerar-demonstrativo/${movimentoId}/flag-cedente/${flagCedente}`, {
+            responseType: 'blob',
+            headers: {
+                'accept': '*/*',
+            },
+        });
+    }
 }

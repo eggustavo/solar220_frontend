@@ -54,9 +54,21 @@ export class MovimentoList implements OnInit {
         this.router.navigate(['/pages/movimentos/editar', movimento.id]);
     }
 
-    imprimirRelatorioCedente(movimento: any) {}
+    imprimirDemonstrativo(movimento: any, flagCedente: number) {
+        this.loading.set(true);
 
-    imprimirRelatorioBeneficiario(movimento: any) {}
+        this.movimentoService.gerarDemonstrativo(movimento.id, flagCedente).subscribe({
+            next: (resposta: any) => {
+                const file = new Blob([resposta], { type: 'application/pdf' });
+                const fileURL = URL.createObjectURL(file);
+                window.open(fileURL);
+                this.loading.set(false);
+            },
+            error: () => this.loading.set(false)
+        });
+    }
+
+    enviarPorEmail(movimento: any) {}
 
     excluir(movimento: any) {
         this.confirmationService.confirm({
