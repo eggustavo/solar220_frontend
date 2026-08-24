@@ -1,26 +1,15 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { NotificationsWidget } from './components/notificationswidget';
-import { StatsWidget } from './components/statswidget';
-import { RecentSalesWidget } from './components/recentsaleswidget';
-import { BestSellingWidget } from './components/bestsellingwidget';
-import { RevenueStreamWidget } from './components/revenuestreamwidget';
+import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { LayoutService } from '@/app/layout/service/layout.service';
 
 @Component({
     selector: 'app-dashboard',
-    imports: [StatsWidget, RecentSalesWidget, BestSellingWidget, RevenueStreamWidget, NotificationsWidget],
     changeDetection: ChangeDetectionStrategy.Eager,
     template: `
-        <div class="grid grid-cols-12 gap-8">
-            <app-stats-widget class="contents" />
-            <div class="col-span-12 xl:col-span-6">
-                <app-recent-sales-widget />
-                <app-best-selling-widget />
-            </div>
-            <div class="col-span-12 xl:col-span-6">
-                <app-revenue-stream-widget />
-                <app-notifications-widget />
-            </div>
+        <div class="flex justify-center items-center">
+            <img [src]="layoutService.isDarkTheme() ? 'images/logo-branca.png' : 'images/logo-preta.png'" alt="Solar 220v" style="width: 75%" />
         </div>
     `
 })
-export class Dashboard {}
+export class Dashboard {
+    layoutService = inject(LayoutService);
+}
