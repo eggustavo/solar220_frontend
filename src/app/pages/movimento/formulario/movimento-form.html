@@ -1,0 +1,234 @@
+<div class="card">
+    <h5 class="m-0 mb-4">{{ editando() ? 'Editar Lançamento' : 'Novo Lançamento' }}</h5>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+        <table class="report-table">
+            <tbody>
+                <tr>
+                    <th colspan="3" class="section-header">Dados Gerais</th>
+                </tr>
+                <tr>
+                    <td class="label"><label for="participanteCedenteId">Cedente:</label></td>
+                    <td class="value" colspan="2">
+                        <p-select inputId="participanteCedenteId" formControlName="participanteCedenteId" [options]="cedentes()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="tipoNegociacao">Tipo Negociação:</label></td>
+                    <td class="value" colspan="2">
+                        <p-select inputId="tipoNegociacao" formControlName="tipoNegociacao" [options]="tiposNegociacao()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorNegociacao">Valor Negociação</label></td>
+                    <td class="value" colspan="2">
+                        @if (form.controls.tipoNegociacao.value === 'Fixo') {
+                            <p-inputnumber inputId="valorNegociacao" formControlName="valorNegociacao" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                        } @else {
+                            <p-inputnumber inputId="valorNegociacao" formControlName="valorNegociacao" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" %" fluid />
+                        }
+                    </td>
+                </tr>
+                <tr class="separator">
+                    <td colspan="3"></td>
+                </tr>                
+                <tr>
+                    <td class="label"><label for="participanteBeneficiarioId">Beneficiário:</label></td>
+                    <td class="value" colspan="2">
+                        <p-select inputId="participanteBeneficiarioId" formControlName="participanteBeneficiarioId" [options]="beneficiarios()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="numeroUc">U.C: Beneficiário</label></td>
+                    <td class="value" colspan="2">
+                        <input id="numeroUc" type="text" pInputText formControlName="numeroUc" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="percentualDesconto">Desconto Beneficiário</label></td>
+                    <td class="value" colspan="2">
+                        <p-inputnumber inputId="percentualDesconto" formControlName="percentualDesconto" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" %" fluid />
+                    </td>
+                </tr>
+                <tr class="separator">
+                    <td colspan="3"></td>
+                </tr>                
+                <tr>
+                    <td class="label"><label for="mesAnoReferencia">Mês e Ano de Referência:</label></td>
+                    <td class="value" colspan="2">
+                        <p-inputmask inputId="mesAnoReferencia" formControlName="mesAnoReferencia" mask="99/9999" placeholder="mm/aaaa" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label">Período Avaliado</td>
+                    <td class="value" colspan="2">
+                        <div class="flex items-center gap-2">
+                            <label for="dataInicialPeriodo" class="sr-only">Data inicial do período</label>
+                            <p-datepicker class="flex-1" inputId="dataInicialPeriodo" formControlName="dataInicialPeriodo" dateFormat="dd/mm/yy" placeholder="Início" [showIcon]="true" fluid />
+                            <span>-</span>
+                            <label for="dataFinalPeriodo" class="sr-only">Data final do período</label>
+                            <p-datepicker class="flex-1" inputId="dataFinalPeriodo" formControlName="dataFinalPeriodo" dateFormat="dd/mm/yy" placeholder="Fim" [showIcon]="true" fluid />
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label" colspan="2"><label for="dataLimitePagamentoConta">Data Limite de Pagamento CONTA</label></td>
+                    <td class="value">
+                        <p-datepicker inputId="dataLimitePagamentoConta" formControlName="dataLimitePagamentoConta" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label" colspan="2"><label for="dataLimitePagamentoCedente">Data Limite de Pagamento CEDENTE</label></td>
+                    <td class="value">
+                        <p-datepicker inputId="dataLimitePagamentoCedente" formControlName="dataLimitePagamentoCedente" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label" colspan="2"><label for="dataLimitePagamentoContratada">Data Limite de Pagamento CONTRATADA</label></td>
+                    <td class="value">
+                        <p-datepicker inputId="dataLimitePagamentoContratada" formControlName="dataLimitePagamentoContratada" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="analistaResponsavel">Analista Responsável:</label></td>
+                    <td class="value" colspan="2">
+                        <input id="analistaResponsavel" type="text" pInputText formControlName="analistaResponsavel" fluid />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="report-table mt-6">
+            <tbody>
+                <tr>
+                    <th colspan="2" class="section-header">Dados para Cálculos</th>
+                </tr>
+                <tr>
+                    <td class="label"><label for="creditoUtilizado">Créditos utilizados (kWh)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="creditoUtilizado" formControlName="creditoUtilizado" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" kWh" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="energiaConsumidaValorTusdAtiva">Valor TUSD ATIVA ( Energia Consumida)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="energiaConsumidaValorTusdAtiva" formControlName="energiaConsumidaValorTusdAtiva" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="energiaConsumidaValorTeAtiva">Valor TE ATIVA ( Energia Consumida)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="energiaConsumidaValorTeAtiva" formControlName="energiaConsumidaValorTeAtiva" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="energiaConsumidaBandeira">Bandeira (Energia Consumida)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="energiaConsumidaBandeira" formControlName="energiaConsumidaBandeira" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="ipCipEncargos">IP-CIP / ENCARGOS</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="ipCipEncargos" formControlName="ipCipEncargos" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row">
+                    <td class="label"><label for="creditoUtilizadoValorTusdInjetada">Valor TUSD injetada (CREDITO ULTILIZADO)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="creditoUtilizadoValorTusdInjetada" formControlName="creditoUtilizadoValorTusdInjetada" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row">
+                    <td class="label"><label for="creditoUtilizadoValorTeInjetada">Valor TE injetada (CREDITO ULTILIZADO)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="creditoUtilizadoValorTeInjetada" formControlName="creditoUtilizadoValorTeInjetada" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row">
+                    <td class="label"><label for="creditoUtilizadoBandeira">BANDEIRA (CRÉDITO UTILIZADO)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="creditoUtilizadoBandeira" formControlName="creditoUtilizadoBandeira" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row">
+                    <td class="label"><label for="valorTotalSemDesconto">Valor Total sem Desconto</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorTotalSemDesconto" formControlName="valorTotalSemDesconto" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="separator">
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="desconto">Desconto</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="desconto" formControlName="desconto" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorTotalComDesconto">Valor com Desconto</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorTotalComDesconto" formControlName="valorTotalComDesconto" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorCpfl">Valor CPFL</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorCpfl" formControlName="valorCpfl" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row highlight-green">
+                    <td class="label"><label for="valorPagoParaCedente">Valor a ser pago para o CEDENTE (pix)</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorPagoParaCedente" formControlName="valorPagoParaCedente" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorPagoParaContratada">Valor a ser pago para a CONTRATADA</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorPagoParaContratada" formControlName="valorPagoParaContratada" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorTotalPagoComCreditos">VALOR TOTAL PAGO COM CRÉDITOS</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorTotalPagoComCreditos" formControlName="valorTotalPagoComCreditos" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="separator">
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorTotalPagoSemCreditos">Valor da Conta Sem Créditos</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorTotalPagoSemCreditos" formControlName="valorTotalPagoSemCreditos" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="economia">Economia</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="economia" formControlName="economia" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr class="bold-row highlight-yellow">
+                    <td class="label"><label for="saldoRestante">SALDO RESTANTE</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="saldoRestante" formControlName="saldoRestante" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" kWh" fluid />
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="flex justify-end gap-2 mt-3">
+            <button pButton type="button" severity="secondary" outlined (click)="cancelar()">Cancelar</button>
+            <button pButton type="submit" [disabled]="salvando()">
+                @if (salvando()) {
+                    <i class="pi pi-spin pi-spinner"></i>
+                } @else {
+                    <i class="pi pi-check"></i>
+                }
+                Salvar
+            </button>
+        </div>        
+    </form>
+</div>

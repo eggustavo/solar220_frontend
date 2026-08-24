@@ -1,0 +1,46 @@
+<div class="card">
+    <p-toolbar styleClass="mb-4">
+        <ng-template #start>
+            <h5 class="m-0">Participantes</h5>
+        </ng-template>
+        <ng-template #end>
+            <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
+        </ng-template>
+    </p-toolbar>
+    <p-table [value]="participantes()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+        <ng-template #header>
+            <tr>
+                <th scope="col">Documento</th>
+                <th scope="col">Nome</th>
+                <th scope="col">Email</th>
+                <th scope="col">Cedente</th>
+                <th scope="col">Beneficiário</th>
+                <th scope="col" style="width: 8rem"></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-participante>
+            <tr>
+                <td>{{ participante.documento }}</td>
+                <td>{{ participante.nome }}</td>
+                <td>{{ participante.email }}</td>
+                <td>
+                    <p-tag [value]="participante.flagCedente ? 'Sim' : 'Não'" [severity]="participante.flagCedente ? 'success' : 'secondary'" />
+                </td>
+                <td>
+                    <p-tag [value]="participante.flagBeneficiario ? 'Sim' : 'Não'" [severity]="participante.flagBeneficiario ? 'success' : 'secondary'" />
+                </td>
+                <td>
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="editar(participante)" pTooltip="Editar"><i class="pi pi-pencil"></i></button>
+                    <button pButton [iconOnly]="true" severity="danger" [rounded]="true" [text]="true" (click)="excluir(participante)" pTooltip="Excluir"><i class="pi pi-trash"></i></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="6" class="text-center">Nenhum participante encontrado.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<p-confirmdialog [style]="{ width: '450px' }" />

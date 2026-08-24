@@ -1,0 +1,46 @@
+<div class="card">
+    <p-toolbar styleClass="mb-4">
+        <ng-template #start>
+            <h5 class="m-0">Lançamentos</h5>
+        </ng-template>
+        <ng-template #end>
+            <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
+        </ng-template>
+    </p-toolbar>
+    <p-table [value]="movimentos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+        <ng-template #header>
+            <tr>
+                <th scope="col">Beneciário</th>
+                <th scope="col">Número UC</th>
+                <th scope="col">Mês/Ano Referência</th>
+                <th scope="col">Liberado para Faturamento</th>
+                <th scope="col">Integrado com o Financeiro</th>
+                <th scope="col" style="width: 8rem"></th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-movimento>
+            <tr>
+                <td>{{ movimento.participanteBeneficiario.nome }}</td>
+                <td>{{ movimento.participanteBeneficiario.numeroUc }}</td>
+                <td>{{ movimento.mesAnoReferencia }}</td>                
+                <td>
+                    <p-tag [value]="movimento.flagLiberadoFaturamento ? 'Sim' : 'Não'" [severity]="movimento.flagLiberadoFaturamento ? 'success' : 'secondary'" />
+                </td>
+                <td>
+                    <p-tag [value]="movimento.flagIntegradoFinanceiro ? 'Sim' : 'Não'" [severity]="movimento.flagIntegradoFinanceiro ? 'success' : 'secondary'" />
+                </td>
+                <td>
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="editar(movimento)" pTooltip="Editar"><i class="pi pi-pencil"></i></button>
+                    <button pButton [iconOnly]="true" severity="danger" [rounded]="true" [text]="true" (click)="excluir(movimento)" pTooltip="Excluir"><i class="pi pi-trash"></i></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="6" class="text-center">Nenhum participante encontrado.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+</div>
+
+<p-confirmdialog [style]="{ width: '450px' }" />
