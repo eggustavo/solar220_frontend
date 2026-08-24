@@ -54,6 +54,10 @@ export class MovimentoList implements OnInit {
         this.router.navigate(['/pages/movimentos/editar', movimento.id]);
     }
 
+    imprimirRelatorioCedente(movimento: any) {}
+
+    imprimirRelatorioBeneficiario(movimento: any) {}
+
     excluir(movimento: any) {
         this.confirmationService.confirm({
             header: 'Confirmar exclusão',
