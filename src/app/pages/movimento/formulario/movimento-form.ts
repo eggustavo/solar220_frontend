@@ -10,6 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
 import { TagModule } from 'primeng/tag';
+import { TextareaModule } from 'primeng/textarea';
 import { TipoNegociacaoService } from '@/app/services/tipo-negociacao.service';
 import { StatusContratoService } from '@/app/services/status-contrato.service';
 import { BandeiraTipoCobrancaService } from '@/app/services/bandeira-tipo-cobranca.service';
@@ -22,7 +23,7 @@ import { MessageService } from 'primeng/api';
 @Component({
     selector: 'app-movimento-form',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, InputTextModule, InputNumberModule, DatePickerModule, SelectModule, InputMaskModule, ButtonModule, TagModule],
+    imports: [CommonModule, ReactiveFormsModule, InputTextModule, InputNumberModule, DatePickerModule, SelectModule, InputMaskModule, ButtonModule, TagModule, TextareaModule],
     styleUrl: './movimento-form.scss',
     templateUrl: './movimento-form.html',
     changeDetection: ChangeDetectionStrategy.Eager,
@@ -73,7 +74,7 @@ export class MovimentoForm implements OnInit {
         valorTotalComDesconto: [{ value: 0, disabled: true }],
         valorCpfl: [0],
         valorPagoParaCedente: [{ value: 0, disabled: true }],
-        valorEmissaoNotaFiscal: this.fb.control<number | null>({ value: null, disabled: true }),
+        valorEmissaoNotaFiscal: [{ value: 0, disabled: true }],
         valorPagoParaContratada: [{ value: 0, disabled: true }],
         valorTotalPagoComCreditos: [{ value: 0, disabled: true }],
         valorTotalPagoSemCreditos: [{ value: 0, disabled: true }],
@@ -234,28 +235,93 @@ export class MovimentoForm implements OnInit {
 
         const formValue = this.form.getRawValue();
 
-        const valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
-        const valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioDesconto ?? 0)) / 100;
-        const valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
-        const valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoBandeira;
-
+        let valorTotalSemDesconto = 0;
+        let valorDesconto = 0;
+        let valorTotalComDesconto = 0;
+        let valorPagoParaCedente = 0;
         let valorPagoParaContratada = 0;
-        if (contrato.cedenteTipoNegociacao === 'Fixo') {
-            valorPagoParaContratada = valorPagoParaCedente - formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0);
+
+        // Cálculo dos valores com base no tipo de cobrança da bandeira
+        if (contrato.bandeiraTipoCobranca === 'BandeiraAntesDoDesconto') {
+            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada + formValue.creditoUtilizadoValorTeInjetada;
+            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
+            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
+            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto;
+        } else if (contrato.bandeiraTipoCobranca === 'BandeiraAposDesconto') {
+            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
+            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
+            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
+            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoValorTeInjetada;
         } else {
-            valorPagoParaContratada = valorPagoParaCedente - formValue.creditoUtilizado * 1;
+            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
+            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
+            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
+            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoValorTeInjetada;
+            valorPagoParaContratada = formValue.creditoUtilizadoValorTeInjetada;
+        }
+
+        //Definição das bases de cálculos para o registro do Movimento
+        const valorBaseCalculoCedente = contrato.cedenteBaseCalculo === 'SobreValorLiquido'
+            ? valorTotalComDesconto
+            : valorPagoParaCedente;
+            
+        const valorBaseCalculoNotaFiscal = contrato.notaFiscalBaseCalculo === 'SobreValorLiquido'
+            ? valorTotalComDesconto
+            : valorPagoParaCedente;       
+
+        //Apurar Valor Nota Fiscal
+        let valorEmissaoNotaFiscal;
+        switch (contrato.notaFiscalTipoEmissao) {
+            case 'NaoSeAplica':
+                valorEmissaoNotaFiscal = 0;
+                break;
+            case 'Emissao220':
+            case 'EmissaoCedente':
+                valorEmissaoNotaFiscal = (valorBaseCalculoNotaFiscal * contrato.notaFiscalPercentualEmissao) / 100;
+                break;
+            case 'EmissaoCompartilhada':
+                valorEmissaoNotaFiscal = 0;
+                break;
+            default:
+                valorEmissaoNotaFiscal = 0;
+                break;
+        }
+        
+        //Apurar Valor Pago Para Contratada
+        if (contrato.cedenteTipoNegociacao === 'Fixo') {
+            valorPagoParaContratada += valorBaseCalculoCedente - (formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0)) + valorEmissaoNotaFiscal;
+        } else {
+            if (contrato.notaFiscalTipoEmissao == 'NaoSeAplica') {
+                valorPagoParaContratada += (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
+            } else if (contrato.notaFiscalTipoEmissao == 'Emissao220') {
+                valorPagoParaContratada += ((valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100) + ((valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100);
+            } else if (contrato.notaFiscalTipoEmissao == 'EmissaoCedente') {
+                valorPagoParaContratada += (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
+            } else {
+                valorPagoParaContratada += (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
+            }
         }
 
         const valorTotalPagoComCreditos = formValue.valorCpfl + valorPagoParaCedente;
         const valorTotalPagoSemCreditos = formValue.energiaConsumidaValorTusdAtiva + formValue.energiaConsumidaValorTeAtiva + formValue.ipCipEncargos + formValue.energiaConsumidaBandeira;
         const valorEconomia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos;
 
-        this.form.patchValue(
+        const valorEmissaoNotaFiscalCedente = contrato.notaFiscalTipoEmissao == 'EmissaoCedente'
+            ? (valorEmissaoNotaFiscal * (100 - contrato.cedenteValorNegociacao)) / 100
+            : 0;
+
+        //Apurar Valor Final Pago Para Cedente
+        valorPagoParaCedente = contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente
+            ? valorPagoParaCedente + valorEmissaoNotaFiscalCedente + formValue.valorCpfl
+            : valorPagoParaCedente + valorEmissaoNotaFiscalCedente;
+
+            this.form.patchValue(
             {
                 valorTotalSemDesconto,
                 valorDesconto,
                 valorTotalComDesconto,
                 valorPagoParaCedente,
+                valorEmissaoNotaFiscal,
                 valorPagoParaContratada,
                 valorTotalPagoComCreditos,
                 valorTotalPagoSemCreditos,

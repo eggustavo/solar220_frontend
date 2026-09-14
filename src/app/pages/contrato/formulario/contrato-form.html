@@ -42,7 +42,7 @@
                 <div class="grid grid-cols-12 gap-4 mt-4">
                     <div class="col-span-12">
                         <label for="observacao" class="block mb-2">Observação</label>
-                        <textarea id="observacao" rows="3" pTextarea formControlName="observacao" fluid></textarea>
+                        <textarea id="observacao" rows="10" pTextarea formControlName="observacao" fluid></textarea>
                     </div>
                 </div>
 
@@ -159,6 +159,21 @@
                     </div>
                 </div>
             </div>
+
+            @if (editando()) {
+                <div class="mt-4">
+                    <h5 class="font-bold mb-3">
+                        <i class="pi pi-align-left mr-2" style="font-size: 1.25rem"></i>
+                        Resumo do Contrato
+                    </h5>
+                    <div class="grid grid-cols-12 gap-4">
+                        <div class="col-span-12">
+                            <label for="descricaoContrato" class="block mb-2">Resumo</label>
+                            <textarea id="descricaoContrato" rows="10" pTextarea [value]="descricaoContrato()" fluid disabled></textarea>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <div class="flex justify-end gap-2">
                 <button pButton type="button" severity="secondary" outlined (click)="cancelar()">Cancelar</button>

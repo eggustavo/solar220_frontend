@@ -32,6 +32,8 @@ export class ContratoForm implements OnInit {
     salvando = signal<boolean>(false);
     carregando = signal<boolean>(false);
 
+    descricaoContrato = signal<string>('');
+
     cedentes = signal<any[]>([]);
     beneficiarios = signal<any[]>([]);
     tiposContrato = signal<any[]>([]);
@@ -64,7 +66,7 @@ export class ContratoForm implements OnInit {
         beneficiarioMediaConsumo: [0, Validators.required],
         notaFiscalTipoEmissao: ['', Validators.required],
         notaFiscalPercentualEmissao: this.fb.control<number | null>(null),
-        notaFiscalBaseCalculo: ['', Validators.required]
+        notaFiscalBaseCalculo: this.fb.control<string | null>(null, Validators.required)
     });
 
     constructor(
@@ -94,8 +96,22 @@ export class ContratoForm implements OnInit {
 
         this.carregarParticipantes();
 
+        this.form.controls.notaFiscalTipoEmissao.valueChanges.subscribe((tipoEmissao) => this.aplicarRegraNotaFiscalTipoEmissao(tipoEmissao));
+
         if (this.contratoId) {
             this.carregarContrato(this.contratoId);
+        }
+    }
+
+    private aplicarRegraNotaFiscalTipoEmissao(tipoEmissao: string) {
+        if (tipoEmissao === 'NaoSeAplica') {
+            this.form.controls.notaFiscalPercentualEmissao.setValue(null);
+            this.form.controls.notaFiscalBaseCalculo.setValue(null);
+            this.form.controls.notaFiscalPercentualEmissao.disable();
+            this.form.controls.notaFiscalBaseCalculo.disable();
+        } else {
+            this.form.controls.notaFiscalPercentualEmissao.enable();
+            this.form.controls.notaFiscalBaseCalculo.enable();
         }
     }
 
@@ -124,6 +140,8 @@ export class ContratoForm implements OnInit {
     }
 
     preencherFormulario(contrato: any) {
+        this.descricaoContrato.set(contrato.descricao ?? '');
+
         this.form.patchValue({
             dataInicioOperacao: this.paraData(contrato.dataInicioOperacao),
             bandeiraTipoCobranca: contrato.bandeiraTipoCobranca,

@@ -47,7 +47,17 @@
                     @if (contrato.observacao) {
                         <tr>
                             <td class="label">Observação:</td>
-                            <td class="value" colspan="2">{{ contrato.observacao }}</td>
+                            <td class="value" colspan="2">
+                                <textarea pTextarea [value]="contrato.observacao" rows="10" fluid disabled></textarea>
+                            </td>
+                        </tr>
+                    }
+                    @if (contrato.descricao) {
+                        <tr>
+                            <td class="label">Resumo:</td>
+                            <td class="value" colspan="2">
+                                <textarea pTextarea [value]="contrato.descricao" rows="10" fluid disabled></textarea>
+                            </td>
                         </tr>
                     }
                 }
@@ -153,7 +163,7 @@
                     </tr>
                     <tr>
                         <td class="label">Desconto:</td>
-                        <td class="value" colspan="2">{{ contrato.beneficiarioDesconto }}%</td>
+                        <td class="value" colspan="2">{{ contrato.beneficiarioPercentualDesconto }}%</td>
                     </tr>
                     <tr>
                         <td class="label">Média de Consumo:</td>
