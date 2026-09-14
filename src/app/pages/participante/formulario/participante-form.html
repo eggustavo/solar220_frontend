@@ -143,7 +143,7 @@
 
 
             <div class="flex justify-end gap-2">
-                <button pButton type="button" severity="secondary" outlined (click)="cancelar()">Cancelar</button>
+                <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
                 <button pButton type="submit" [disabled]="salvando()">
                     @if (salvando()) {
                         <i class="pi pi-spin pi-spinner"></i>

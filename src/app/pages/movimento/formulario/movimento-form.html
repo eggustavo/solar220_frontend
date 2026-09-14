@@ -329,8 +329,8 @@
                 </tr>
             </tbody>
         </table>
-        <div class="flex justify-end gap-2 mt-3">
-            <button pButton type="button" severity="secondary" outlined (click)="cancelar()">Cancelar</button>
+        <div class="form-actions flex justify-end gap-2 mt-3">
+            <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
             <button pButton type="submit" [disabled]="salvando()">
                 @if (salvando()) {
                     <i class="pi pi-spin pi-spinner"></i>
