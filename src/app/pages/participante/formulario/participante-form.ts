@@ -5,26 +5,22 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageModule } from 'primeng/message';
 import { SelectModule } from 'primeng/select';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 import { UnidadeFederativaService } from '@/app/services/unidade-federativa.service.';
 import { TipoChavePixService } from '@/app/services/tipo-chave-pix.service';
-import { TipoRecebimentoSaldoService } from '@/app/services/tipo-recebimento-saldo';
-import { TipoNegociacaoService } from '@/app/services/tipo-negociacao.service';
-import { TipoFechamentoEnergiaService } from '@/app/services/tipo-fechamento-energia.service';
 import { ParticipanteService } from '@/app/services/participante.service';
 import { CepService } from '@/app/services/cep.service';
 
 @Component({
     selector: 'app-participante-form',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, InputNumberModule, SelectModule, DatePickerModule, ToggleSwitchModule, MessageModule],
+    imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, ToggleSwitchModule, MessageModule],
     templateUrl: './participante-form.html',
     changeDetection: ChangeDetectionStrategy.Eager,
-    providers: [UnidadeFederativaService, TipoChavePixService, TipoNegociacaoService, TipoFechamentoEnergiaService, TipoRecebimentoSaldoService]
+    providers: [UnidadeFederativaService, TipoChavePixService]
 })
 export class ParticipanteForm implements OnInit {
     editando = signal<boolean>(false);
@@ -32,9 +28,6 @@ export class ParticipanteForm implements OnInit {
     carregando = signal<boolean>(false);
     unidadesFederativas = signal<any[]>([]);
     tiposChavePix = signal<any[]>([]);
-    tiposNegociacao = signal<any[]>([]);
-    tiposFechamentoEnergia = signal<any[]>([]);
-    tiposRecebimentoSaldo = signal<any[]>([]);
 
     private participanteId: string | null = null;
 
@@ -56,90 +49,20 @@ export class ParticipanteForm implements OnInit {
         flagCedente: [false],
         flagBeneficiario: [false],
         dadosBancario: this.fb.nonNullable.group({
-            participanteId: [''],
             tipoChavePix: [''],
             chavePix: ['']
-        }),
-        cedente: this.fb.nonNullable.group({
-            participanteId: [''],
-            tipoNegociacao: [''],
-            valorNegociacao: [0],
-            numeroUc: [''],
-            tipoFechamentoEnergia: ['']
-        }),
-        beneficiario: this.fb.nonNullable.group({
-            participanteId: [''],
-            desconto: [0],
-            numeroUc: [''],
-            tipoRecebimentoSaldo: [''],
-            mediaConsumo: [0]
         })
     });
 
     constructor(
         private readonly unidadeFederativaService: UnidadeFederativaService,
         private readonly tipoChavePixService: TipoChavePixService,
-        private readonly tipoNegociacaoService: TipoNegociacaoService,
-        private readonly tipoFechamentoEnergiaService: TipoFechamentoEnergiaService,
-        private readonly tipoRecebimentoSaldoService: TipoRecebimentoSaldoService,
         private readonly participanteService: ParticipanteService,
         private readonly cepService: CepService,
         private readonly messageService: MessageService,
         private readonly router: Router,
         private readonly route: ActivatedRoute
-    ) {
-        this.form.controls.flagCedente.valueChanges.subscribe((ativo) => this.atualizarValidadoresCedente(ativo));
-        this.form.controls.flagBeneficiario.valueChanges.subscribe((ativo) => this.atualizarValidadoresBeneficiario(ativo));
-    }
-
-    private atualizarValidadoresCedente(ativo: boolean) {
-        const grupo = this.form.controls.cedente.controls;
-        const validador = ativo ? Validators.required : null;
-
-        grupo.tipoNegociacao.setValidators(validador);
-        grupo.valorNegociacao.setValidators(validador);
-        grupo.numeroUc.setValidators(validador);
-        grupo.tipoFechamentoEnergia.setValidators(validador);
-
-        grupo.tipoNegociacao.updateValueAndValidity();
-        grupo.valorNegociacao.updateValueAndValidity();
-        grupo.numeroUc.updateValueAndValidity();
-        grupo.tipoFechamentoEnergia.updateValueAndValidity();
-
-        if (!ativo) {
-            this.form.controls.cedente.markAsUntouched();
-        }
-    }
-
-    private atualizarValidadoresBeneficiario(ativo: boolean) {
-        const grupo = this.form.controls.beneficiario.controls;
-        const validador = ativo ? Validators.required : null;
-
-        grupo.desconto.setValidators(validador);
-        grupo.numeroUc.setValidators(validador);
-        grupo.tipoRecebimentoSaldo.setValidators(validador);
-        grupo.mediaConsumo.setValidators(validador);
-
-        grupo.desconto.updateValueAndValidity();
-        grupo.numeroUc.updateValueAndValidity();
-        grupo.tipoRecebimentoSaldo.updateValueAndValidity();
-        grupo.mediaConsumo.updateValueAndValidity();
-
-        if (!ativo) {
-            this.form.controls.beneficiario.markAsUntouched();
-        }
-    }
-
-    private marcarCamposRelevantesComoTocados() {
-        this.form.markAllAsTouched();
-
-        if (!this.form.controls.flagCedente.value) {
-            this.form.controls.cedente.markAsUntouched();
-        }
-        if (!this.form.controls.flagBeneficiario.value) {
-            this.form.controls.beneficiario.markAsUntouched();
-        }
-    }
+    ) {}
 
     ngOnInit() {
         this.editando.set(true);
@@ -148,9 +71,6 @@ export class ParticipanteForm implements OnInit {
 
         this.unidadesFederativas.set(this.unidadeFederativaService.listar());
         this.tiposChavePix.set(this.tipoChavePixService.listar());
-        this.tiposNegociacao.set(this.tipoNegociacaoService.listar());
-        this.tiposFechamentoEnergia.set(this.tipoFechamentoEnergiaService.listar());
-        this.tiposRecebimentoSaldo.set(this.tipoRecebimentoSaldoService.listar());
 
         if (this.participanteId) {
             this.carregarParticipante(this.participanteId);
@@ -190,30 +110,15 @@ export class ParticipanteForm implements OnInit {
             flagCedente: participante.flagCedente,
             flagBeneficiario: participante.flagBeneficiario,
             dadosBancario: {
-                participanteId: participante.dadosBancario?.participanteId ?? null,
                 tipoChavePix: participante.dadosBancario?.tipoChavePix ?? null,
                 chavePix: participante.dadosBancario?.chavePix ?? ''
-            },
-            cedente: {
-                participanteId: participante.cedente?.participanteId ?? null,
-                tipoNegociacao: participante.cedente?.tipoNegociacao ?? null,
-                valorNegociacao: participante.cedente?.valorNegociacao ?? null,
-                numeroUc: participante.cedente?.numeroUc ?? '',
-                tipoFechamentoEnergia: participante.cedente?.tipoFechamentoEnergia ?? null
-            },
-            beneficiario: {
-                participanteId: participante.beneficiario?.participanteId ?? null,
-                desconto: participante.beneficiario?.desconto ?? null,
-                numeroUc: participante.beneficiario?.numeroUc ?? '',
-                tipoRecebimentoSaldo: participante.beneficiario?.tipoRecebimentoSaldo ?? null,
-                mediaConsumo: participante.beneficiario?.mediaConsumo ?? null
             }
         });
     }
 
     salvar() {
         if (this.form.invalid) {
-            this.marcarCamposRelevantesComoTocados();
+            this.form.markAllAsTouched();
             return;
         }
 
@@ -296,7 +201,8 @@ export class ParticipanteForm implements OnInit {
             unidadeFederativa: participante.unidadeFederativa!,
             dataFechamento: this.paraTexto(participante.dataFechamento!),
             flagCedente: participante.flagCedente,
-            flagBeneficiario: participante.flagBeneficiario
+            flagBeneficiario: participante.flagBeneficiario,
+            dadosBancario: this.montarBancario()
         };
     }
 
@@ -310,52 +216,14 @@ export class ParticipanteForm implements OnInit {
         return { tipoChavePix, chavePix };
     }
 
-    private montarCedente() {
-        const participante = this.form.getRawValue();
-
-        if (!participante.flagCedente) {
-            return null;
-        }
-
-        return {
-            tipoNegociacao: participante.cedente.tipoNegociacao!,
-            valorNegociacao: participante.cedente.valorNegociacao ?? 0,
-            numeroUc: participante.cedente.numeroUc || null,
-            tipoFechamentoEnergia: participante.cedente.tipoFechamentoEnergia!
-        };
-    }
-
-    private montarBeneficiario() {
-        const participante = this.form.getRawValue();
-
-        if (!participante.flagBeneficiario) {
-            return null;
-        }
-
-        return {
-            desconto: participante.beneficiario.desconto ?? 0,
-            numeroUc: participante.beneficiario.numeroUc || null,
-            tipoRecebimentoSaldo: participante.beneficiario.tipoRecebimentoSaldo!,
-            mediaConsumo: participante.beneficiario.mediaConsumo ?? 0
-        };
-    }
-
     private montarRequestAdicionar() {
-        return {
-            ...this.dadosComuns(),
-            dadosBancario: this.montarBancario(),
-            cedente: this.montarCedente(),
-            beneficiario: this.montarBeneficiario()
-        };
+        return this.dadosComuns();
     }
 
     private montarRequestAtualizar() {
         return {
             id: this.participanteId!,
-            ...this.dadosComuns(),
-            dadosBancario: this.montarBancario(),
-            cedente: this.montarCedente(),
-            beneficiario: this.montarBeneficiario()
+            ...this.dadosComuns()
         };
     }
 

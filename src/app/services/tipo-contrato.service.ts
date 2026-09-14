@@ -1,7 +1,7 @@
-import { Injectable } from "@angular/core";
+import { Injectable } from '@angular/core';
 
 @Injectable()
-export class TipoFechamentoEnergiaService {
+export class TipoContratoService {
     listar() {
         return [
             {
@@ -12,6 +12,6 @@ export class TipoFechamentoEnergiaService {
                 id: 'Excedente',
                 descricao: 'Excedente'
             }
-        ];        
+        ];
     }
 }

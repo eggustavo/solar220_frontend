@@ -37,6 +37,11 @@ export class AppMenu implements OnInit {
                         label: 'Participantes',
                         icon: 'pi pi-fw pi-users',
                         routerLink: ['/pages/participantes']
+                    },
+                    {
+                        label: 'Contratos',
+                        icon: 'pi pi-fw pi-file',
+                        routerLink: ['/pages/contratos']
                     }
                 ]
             },

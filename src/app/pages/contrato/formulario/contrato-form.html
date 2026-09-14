@@ -1,0 +1,176 @@
+<div class="card">
+    <h5 class="m-0 mb-4">{{ editando() ? 'Editar Contrato' : 'Novo Contrato' }}</h5>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="flex flex-col gap-6">
+            <div>
+                <h5 class="font-bold mb-3">
+                    <i class="pi pi-file mr-2" style="font-size: 1.25rem"></i>
+                    Dados Gerais
+                </h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="dataInicioOperacao" class="block mb-2">Início da Operação</label>
+                        <p-datepicker inputId="dataInicioOperacao" formControlName="dataInicioOperacao" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
+                        @if (form.controls.dataInicioOperacao.invalid && form.controls.dataInicioOperacao.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="tipoContrato" class="block mb-2">Tipo de Contrato</label>
+                        <p-select inputId="tipoContrato" formControlName="tipoContrato" [options]="tiposContrato()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.tipoContrato.invalid && form.controls.tipoContrato.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="status" class="block mb-2">Status</label>
+                        <p-select inputId="status" formControlName="status" [options]="statusContrato()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.status.invalid && form.controls.status.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="bandeiraTipoCobranca" class="block mb-2">Bandeira Tipo Cobrança</label>
+                        <p-select inputId="bandeiraTipoCobranca" formControlName="bandeiraTipoCobranca" [options]="bandeirasTipoCobranca()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.bandeiraTipoCobranca.invalid && form.controls.bandeiraTipoCobranca.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-12 gap-4 mt-4">
+                    <div class="col-span-12">
+                        <label for="observacao" class="block mb-2">Observação</label>
+                        <textarea id="observacao" rows="3" pTextarea formControlName="observacao" fluid></textarea>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-8 mt-4">
+                    <div class="flex items-center gap-2">
+                        <p-toggleswitch inputId="flagValorContaEnergiaInclusoNoPagamentoAoCedente" formControlName="flagValorContaEnergiaInclusoNoPagamentoAoCedente" />
+                        <label for="flagValorContaEnergiaInclusoNoPagamentoAoCedente">Valor da conta de energia incluso no pagamento ao cedente</label>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <p-toggleswitch inputId="pagamentoPorBoletoEmitidoPela220" formControlName="pagamentoPorBoletoEmitidoPela220" />
+                        <label for="pagamentoPorBoletoEmitidoPela220">Pagamento por boleto emitido pela 220</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h5 class="font-bold mb-3">
+                    <i class="pi pi-file-export mr-2" style="font-size: 1.25rem"></i>
+                    Dados do Cedente
+                </h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="cedenteId" class="block mb-2">Cedente</label>
+                        <p-select inputId="cedenteId" formControlName="cedenteId" [options]="cedentes()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" [showClear]="true" />
+                        @if (form.controls.cedenteId.invalid && form.controls.cedenteId.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="cedenteNumeroUc" class="block mb-2">Número UC</label>
+                        <input id="cedenteNumeroUc" type="text" pInputText formControlName="cedenteNumeroUc" fluid />
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="cedenteTipoNegociacao" class="block mb-2">Tipo de Negociação</label>
+                        <p-select inputId="cedenteTipoNegociacao" formControlName="cedenteTipoNegociacao" [options]="tiposNegociacao()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.cedenteTipoNegociacao.invalid && form.controls.cedenteTipoNegociacao.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="cedenteValorNegociacao" class="block mb-2">Valor da Negociação</label>
+                        <p-inputnumber inputId="cedenteValorNegociacao" formControlName="cedenteValorNegociacao" mode="decimal" locale="pt-BR" [minFractionDigits]="2" fluid />
+                        @if (form.controls.cedenteValorNegociacao.invalid && form.controls.cedenteValorNegociacao.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="cedenteBaseCalculo" class="block mb-2">Base de Cálculo</label>
+                        <p-select inputId="cedenteBaseCalculo" formControlName="cedenteBaseCalculo" [options]="basesCalculo()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.cedenteBaseCalculo.invalid && form.controls.cedenteBaseCalculo.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h5 class="font-bold mb-3">
+                    <i class="pi pi-file-import mr-2" style="font-size: 1.25rem"></i>
+                    Dados do Beneficiário
+                </h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="beneficiarioId" class="block mb-2">Beneficiário</label>
+                        <p-select inputId="beneficiarioId" formControlName="beneficiarioId" [options]="beneficiarios()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" [showClear]="true" />
+                        @if (form.controls.beneficiarioId.invalid && form.controls.beneficiarioId.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
+                        <label for="beneficiarioNumeroUc" class="block mb-2">Número UC</label>
+                        <input id="beneficiarioNumeroUc" type="text" pInputText formControlName="beneficiarioNumeroUc" fluid />
+                    </div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="beneficiarioDesconto" class="block mb-2">Desconto (%)</label>
+                        <p-inputnumber inputId="beneficiarioDesconto" formControlName="beneficiarioDesconto" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix="%" fluid />
+                        @if (form.controls.beneficiarioDesconto.invalid && form.controls.beneficiarioDesconto.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-3">
+                        <label for="beneficiarioMediaConsumo" class="block mb-2">Média de Consumo (kWh)</label>
+                        <p-inputnumber inputId="beneficiarioMediaConsumo" formControlName="beneficiarioMediaConsumo" mode="decimal" locale="pt-BR" [minFractionDigits]="2" fluid />
+                        @if (form.controls.beneficiarioMediaConsumo.invalid && form.controls.beneficiarioMediaConsumo.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <h5 class="font-bold mb-3">
+                    <i class="pi pi-receipt mr-2" style="font-size: 1.25rem"></i>
+                    Nota Fiscal
+                </h5>
+                <div class="grid grid-cols-12 gap-4">
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="notaFiscalTipoEmissao" class="block mb-2">Tipo de Emissão</label>
+                        <p-select inputId="notaFiscalTipoEmissao" formControlName="notaFiscalTipoEmissao" [options]="tiposNotaFiscalEmissao()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.notaFiscalTipoEmissao.invalid && form.controls.notaFiscalTipoEmissao.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="notaFiscalPercentualEmissao" class="block mb-2">Percentual de Emissão</label>
+                        <p-inputnumber inputId="notaFiscalPercentualEmissao" formControlName="notaFiscalPercentualEmissao" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix="%" fluid />
+                    </div>
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="notaFiscalBaseCalculo" class="block mb-2">Base de Cálculo</label>
+                        <p-select inputId="notaFiscalBaseCalculo" formControlName="notaFiscalBaseCalculo" [options]="basesCalculo()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricao" [showClear]="true" />
+                        @if (form.controls.notaFiscalBaseCalculo.invalid && form.controls.notaFiscalBaseCalculo.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button pButton type="button" severity="secondary" outlined (click)="cancelar()">Cancelar</button>
+                <button pButton type="submit" [disabled]="salvando()">
+                    @if (salvando()) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                    } @else {
+                        <i class="pi pi-check"></i>
+                    }
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
