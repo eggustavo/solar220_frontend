@@ -117,9 +117,9 @@
                         <input id="beneficiarioNumeroUc" type="text" pInputText formControlName="beneficiarioNumeroUc" fluid />
                     </div>
                     <div class="col-span-12 md:col-span-3">
-                        <label for="beneficiarioDesconto" class="block mb-2">Desconto (%)</label>
-                        <p-inputnumber inputId="beneficiarioDesconto" formControlName="beneficiarioDesconto" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix="%" fluid />
-                        @if (form.controls.beneficiarioDesconto.invalid && form.controls.beneficiarioDesconto.touched) {
+                        <label for="beneficiarioPercentualDesconto" class="block mb-2">Desconto (%)</label>
+                        <p-inputnumber inputId="beneficiarioPercentualDesconto" formControlName="beneficiarioPercentualDesconto" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix="%" fluid />
+                        @if (form.controls.beneficiarioPercentualDesconto.invalid && form.controls.beneficiarioPercentualDesconto.touched) {
                             <small class="text-red-500">Campo obrigatório.</small>
                         }
                     </div>

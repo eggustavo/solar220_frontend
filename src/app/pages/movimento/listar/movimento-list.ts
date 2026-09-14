@@ -88,7 +88,7 @@ export class MovimentoList implements OnInit {
     excluir(movimento: any) {
         this.confirmationService.confirm({
             header: 'Confirmar exclusão',
-            message: `Deseja realmente excluir o movimento "${movimento.participanteBeneficiario.nome} (${movimento.participanteBeneficiario.numeroUc}) - ${movimento.mesAnoReferencia}"?`,
+            message: `Deseja realmente excluir o movimento "${movimento.contrato.beneficiario.nome} (${movimento.contrato.beneficiarioNumeroUc}) - ${movimento.mesAnoReferencia}"?`,
             icon: 'pi pi-exclamation-triangle',
             acceptButtonProps: { severity: 'danger', label: 'Excluir' },
             rejectButtonProps: { severity: 'secondary', outlined: true, label: 'Cancelar' },

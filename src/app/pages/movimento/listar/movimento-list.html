@@ -20,8 +20,8 @@
         </ng-template>
         <ng-template #body let-movimento>
             <tr>
-                <td>{{ movimento.participanteBeneficiario.nome }}</td>
-                <td>{{ movimento.participanteBeneficiario.numeroUc }}</td>
+                <td>{{ movimento.contrato.beneficiario.nome }}</td>
+                <td>{{ movimento.contrato.beneficiarioNumeroUc }}</td>
                 <td style="text-align: center">{{ movimento.mesAnoReferencia }}</td>
                 <td style="text-align: center">
                     <p-tag [value]="movimento.flagLiberadoFaturamento ? 'Sim' : 'Não'" [severity]="movimento.flagLiberadoFaturamento ? 'success' : 'secondary'" />

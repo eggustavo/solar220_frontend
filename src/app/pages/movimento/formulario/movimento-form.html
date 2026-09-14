@@ -3,56 +3,57 @@
 
     <form [formGroup]="form" (ngSubmit)="salvar()">
         <table class="report-table">
+            <colgroup>
+                <col style="width: 40%" />
+                <col style="width: 20%" />
+                <col style="width: 40%" />
+            </colgroup>
             <tbody>
                 <tr>
                     <th colspan="3" class="section-header">Dados Gerais</th>
                 </tr>
                 <tr>
-                    <td class="label"><label for="participanteCedenteId">Cedente:</label></td>
+                    <td class="label"><label for="contratoId">Contrato:</label></td>
                     <td class="value" colspan="2">
-                        <p-select inputId="participanteCedenteId" formControlName="participanteCedenteId" [options]="cedentes()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" />
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label"><label for="tipoNegociacao">Tipo Negociação:</label></td>
-                    <td class="value" colspan="2">
-                        <p-select inputId="tipoNegociacao" formControlName="tipoNegociacao" [options]="tiposNegociacao()" optionLabel="descricao" optionValue="id" placeholder="Selecione" fluid appendTo="body" />
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label"><label for="valorNegociacao">Valor Negociação</label></td>
-                    <td class="value" colspan="2">
-                        @if (form.controls.tipoNegociacao.value === 'Fixo') {
-                            <p-inputnumber inputId="valorNegociacao" formControlName="valorNegociacao" mode="currency" currency="BRL" locale="pt-BR" fluid />
-                        } @else {
-                            <p-inputnumber inputId="valorNegociacao" formControlName="valorNegociacao" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" %" fluid />
+                        <p-select inputId="contratoId" formControlName="contratoId" [options]="contratos()" optionLabel="descricaoSelecao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricaoSelecao" />
+                        @if (form.controls.contratoId.invalid && form.controls.contratoId.touched) {
+                            <small class="text-red-500">Campo obrigatório.</small>
                         }
                     </td>
                 </tr>
+                @if (contratoSelecionado(); as contrato) {
+                    <tr>
+                        <td class="label">Início da Operação:</td>
+                        <td class="value" colspan="2">{{ contrato.dataInicioOperacao | date: 'dd/MM/yyyy' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Status:</td>
+                        <td class="value" colspan="2">
+                            <p-tag [value]="descricao(statusContrato(), contrato.status)" [severity]="contrato.status === 'Ativo' ? 'success' : contrato.status === 'Concluido' ? 'info' : 'secondary'" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">Bandeira Tipo Cobrança:</td>
+                        <td class="value" colspan="2">{{ descricao(bandeirasTipoCobranca(), contrato.bandeiraTipoCobranca) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Valor conta energia incluso no pagamento ao cedente:</td>
+                        <td class="value" colspan="2">{{ contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente ? 'Sim' : 'Não' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Pagamento por boleto emitido pela 220:</td>
+                        <td class="value" colspan="2">{{ contrato.pagamentoPorBoletoEmitidoPela220 ? 'Sim' : 'Não' }}</td>
+                    </tr>
+                    @if (contrato.observacao) {
+                        <tr>
+                            <td class="label">Observação:</td>
+                            <td class="value" colspan="2">{{ contrato.observacao }}</td>
+                        </tr>
+                    }
+                }
                 <tr class="separator">
                     <td colspan="3"></td>
-                </tr>                
-                <tr>
-                    <td class="label"><label for="participanteBeneficiarioId">Beneficiário:</label></td>
-                    <td class="value" colspan="2">
-                        <p-select inputId="participanteBeneficiarioId" formControlName="participanteBeneficiarioId" [options]="beneficiarios()" optionLabel="nome" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="nome" />
-                    </td>
                 </tr>
-                <tr>
-                    <td class="label"><label for="numeroUc">U.C: Beneficiário</label></td>
-                    <td class="value" colspan="2">
-                        <input id="numeroUc" type="text" pInputText formControlName="numeroUc" fluid />
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label"><label for="percentualDesconto">Desconto Beneficiário</label></td>
-                    <td class="value" colspan="2">
-                        <p-inputnumber inputId="percentualDesconto" formControlName="percentualDesconto" mode="decimal" locale="pt-BR" [minFractionDigits]="2" suffix=" %" fluid />
-                    </td>
-                </tr>
-                <tr class="separator">
-                    <td colspan="3"></td>
-                </tr>                
                 <tr>
                     <td class="label"><label for="mesAnoReferencia">Mês e Ano de Referência:</label></td>
                     <td class="value" colspan="2">
@@ -72,33 +73,126 @@
                     </td>
                 </tr>
                 <tr>
-                    <td class="label" colspan="2"><label for="dataLimitePagamentoConta">Data Limite de Pagamento CONTA</label></td>
-                    <td class="value">
+                    <td class="label"><label for="dataLimitePagamentoConta">Data Limite de Pagamento CONTA</label></td>
+                    <td class="value" colspan="2">
                         <p-datepicker inputId="dataLimitePagamentoConta" formControlName="dataLimitePagamentoConta" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
                     </td>
                 </tr>
                 <tr>
-                    <td class="label" colspan="2"><label for="dataLimitePagamentoCedente">Data Limite de Pagamento CEDENTE</label></td>
-                    <td class="value">
+                    <td class="label"><label for="dataLimitePagamentoCedente">Data Limite de Pagamento CEDENTE</label></td>
+                    <td class="value" colspan="2">
                         <p-datepicker inputId="dataLimitePagamentoCedente" formControlName="dataLimitePagamentoCedente" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
                     </td>
                 </tr>
                 <tr>
-                    <td class="label" colspan="2"><label for="dataLimitePagamentoContratada">Data Limite de Pagamento CONTRATADA</label></td>
-                    <td class="value">
-                        <p-datepicker inputId="dataLimitePagamentoContratada" formControlName="dataLimitePagamentoContratada" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
-                    </td>
-                </tr>
-                <tr>
-                    <td class="label"><label for="analistaResponsavel">Analista Responsável:</label></td>
+                    <td class="label"><label for="dataLimitePagamentoContratada">Data Limite de Pagamento CONTRATADA</label></td>
                     <td class="value" colspan="2">
-                        <input id="analistaResponsavel" type="text" pInputText formControlName="analistaResponsavel" fluid />
+                        <p-datepicker inputId="dataLimitePagamentoContratada" formControlName="dataLimitePagamentoContratada" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
                     </td>
                 </tr>
             </tbody>
         </table>
 
+        @if (contratoSelecionado(); as contrato) {
+            <table class="report-table mt-6">
+                <colgroup>
+                    <col style="width: 40%" />
+                    <col style="width: 20%" />
+                    <col style="width: 40%" />
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <th colspan="3" class="section-header">Dados do Cedente</th>
+                    </tr>
+                    <tr>
+                        <td class="label">Nome do Cedente:</td>
+                        <td class="value" colspan="2">{{ contratoResumo()?.cedente?.nome }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Número UC:</td>
+                        <td class="value" colspan="2">{{ contrato.cedenteNumeroUc }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Tipo de Negociação:</td>
+                        <td class="value" colspan="2">{{ descricao(tiposNegociacao(), contrato.cedenteTipoNegociacao) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Valor da Negociação:</td>
+                        <td class="value" colspan="2">
+                            @if (contrato.cedenteTipoNegociacao === 'Fixo') {
+                                {{ contrato.cedenteValorNegociacao | currency: 'BRL' : 'symbol' : '1.2-2' : 'pt-BR' }}
+                            } @else {
+                                {{ contrato.cedenteValorNegociacao }}%
+                            }
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="label">Base de Cálculo:</td>
+                        <td class="value" colspan="2">{{ descricao(basesCalculo(), contrato.cedenteBaseCalculo) }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="report-table mt-6">
+                <colgroup>
+                    <col style="width: 40%" />
+                    <col style="width: 20%" />
+                    <col style="width: 40%" />
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <th colspan="3" class="section-header">Dados do Beneficiário</th>
+                    </tr>
+                    <tr>
+                        <td class="label">Nome do Beneficiário:</td>
+                        <td class="value" colspan="2">{{ contratoResumo()?.beneficiario?.nome }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Número UC:</td>
+                        <td class="value" colspan="2">{{ contrato.beneficiarioNumeroUc }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Desconto:</td>
+                        <td class="value" colspan="2">{{ contrato.beneficiarioDesconto }}%</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Média de Consumo:</td>
+                        <td class="value" colspan="2">{{ contrato.beneficiarioMediaConsumo }} kWh</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="report-table mt-6">
+                <colgroup>
+                    <col style="width: 40%" />
+                    <col style="width: 20%" />
+                    <col style="width: 40%" />
+                </colgroup>
+                <tbody>
+                    <tr>
+                        <th colspan="3" class="section-header">Dados da Nota Fiscal</th>
+                    </tr>
+                    <tr>
+                        <td class="label">Tipo de Emissão:</td>
+                        <td class="value" colspan="2">{{ descricao(tiposNotaFiscalEmissao(), contrato.notaFiscalTipoEmissao) }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Percentual de Emissão:</td>
+                        <td class="value" colspan="2">{{ contrato.notaFiscalPercentualEmissao !== null && contrato.notaFiscalPercentualEmissao !== undefined ? contrato.notaFiscalPercentualEmissao + '%' : '-' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">Base de Cálculo:</td>
+                        <td class="value" colspan="2">{{ contrato.notaFiscalBaseCalculo ? descricao(basesCalculo(), contrato.notaFiscalBaseCalculo) : '-' }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        }
+
         <table class="report-table mt-6">
+            <colgroup>
+                <col style="width: 65%" />
+                <col style="width: 35%" />
+            </colgroup>
             <tbody>
                 <tr>
                     <th colspan="2" class="section-header">Dados para Cálculos</th>
@@ -161,9 +255,9 @@
                     <td colspan="2"></td>
                 </tr>
                 <tr>
-                    <td class="label"><label for="desconto">Desconto</label></td>
+                    <td class="label"><label for="valorDesconto">Desconto</label></td>
                     <td class="value">
-                        <p-inputnumber inputId="desconto" formControlName="desconto" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                        <p-inputnumber inputId="valorDesconto" formControlName="valorDesconto" mode="currency" currency="BRL" locale="pt-BR" fluid />
                     </td>
                 </tr>
                 <tr>
@@ -182,6 +276,12 @@
                     <td class="label"><label for="valorPagoParaCedente">Valor a ser pago para o CEDENTE (pix)</label></td>
                     <td class="value">
                         <p-inputnumber inputId="valorPagoParaCedente" formControlName="valorPagoParaCedente" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                    </td>
+                </tr>
+                <tr>
+                    <td class="label"><label for="valorEmissaoNotaFiscal">Valor Emissão Nota Fiscal</label></td>
+                    <td class="value">
+                        <p-inputnumber inputId="valorEmissaoNotaFiscal" formControlName="valorEmissaoNotaFiscal" mode="currency" currency="BRL" locale="pt-BR" fluid />
                     </td>
                 </tr>
                 <tr>
@@ -206,9 +306,9 @@
                     </td>
                 </tr>
                 <tr>
-                    <td class="label"><label for="economia">Economia</label></td>
+                    <td class="label"><label for="valorEconomia">Economia</label></td>
                     <td class="value">
-                        <p-inputnumber inputId="economia" formControlName="economia" mode="currency" currency="BRL" locale="pt-BR" fluid />
+                        <p-inputnumber inputId="valorEconomia" formControlName="valorEconomia" mode="currency" currency="BRL" locale="pt-BR" fluid />
                     </td>
                 </tr>
                 <tr class="bold-row highlight-yellow">

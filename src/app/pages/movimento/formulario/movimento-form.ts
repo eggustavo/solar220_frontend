@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ParticipanteService } from '@/app/services/participante.service';
+import { ContratoService } from '@/app/services/contrato.service';
 import { debounceTime, merge } from 'rxjs';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputMaskModule } from 'primeng/inputmask';
@@ -9,7 +9,12 @@ import { InputNumberModule } from 'primeng/inputnumber';
 import { InputTextModule } from 'primeng/inputtext';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
+import { TagModule } from 'primeng/tag';
 import { TipoNegociacaoService } from '@/app/services/tipo-negociacao.service';
+import { StatusContratoService } from '@/app/services/status-contrato.service';
+import { BandeiraTipoCobrancaService } from '@/app/services/bandeira-tipo-cobranca.service';
+import { BaseCalculoService } from '@/app/services/base-calculo.service';
+import { NotaFiscalTipoEmissaoService } from '@/app/services/nota-fiscal-tipo-emissao.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
 import { MessageService } from 'primeng/api';
@@ -17,39 +22,44 @@ import { MessageService } from 'primeng/api';
 @Component({
     selector: 'app-movimento-form',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, InputTextModule, InputNumberModule, DatePickerModule, SelectModule, InputMaskModule, ButtonModule],
+    imports: [CommonModule, ReactiveFormsModule, InputTextModule, InputNumberModule, DatePickerModule, SelectModule, InputMaskModule, ButtonModule, TagModule],
     styleUrl: './movimento-form.scss',
     templateUrl: './movimento-form.html',
     changeDetection: ChangeDetectionStrategy.Eager,
-    providers: [TipoNegociacaoService]
+    providers: [TipoNegociacaoService, StatusContratoService, BandeiraTipoCobrancaService, BaseCalculoService, NotaFiscalTipoEmissaoService]
 })
 export class MovimentoForm implements OnInit {
     private readonly fb = inject(FormBuilder);
-    private readonly participanteService = inject(ParticipanteService);
+    private readonly contratoService = inject(ContratoService);
     private readonly movimentoService = inject(MovimentoService);
     private readonly tipoNegociacaoService = inject(TipoNegociacaoService);
+    private readonly statusContratoService = inject(StatusContratoService);
+    private readonly bandeiraTipoCobrancaService = inject(BandeiraTipoCobrancaService);
+    private readonly baseCalculoService = inject(BaseCalculoService);
+    private readonly notaFiscalTipoEmissaoService = inject(NotaFiscalTipoEmissaoService);
 
     editando = signal<boolean>(false);
     salvando = signal<boolean>(false);
     carregando = signal<boolean>(false);
-    cedentes = signal<any[]>([]);
-    beneficiarios = signal<any[]>([]);
-
-    cedenteSelecionado = signal<any>(null);
-    beneficiarioSelecionado = signal<any>(null);
+    contratos = signal<any[]>([]);
     tiposNegociacao = signal<any[]>([]);
+    statusContrato = signal<any[]>([]);
+    bandeirasTipoCobranca = signal<any[]>([]);
+    basesCalculo = signal<any[]>([]);
+    tiposNotaFiscalEmissao = signal<any[]>([]);
+
+    contratoIdSelecionado = signal<string>('');
+    contratoSelecionado = signal<any>(null);
+    contratoResumo = computed(() => this.contratos().find((c) => c.id === this.contratoIdSelecionado()) ?? null);
 
     form = this.fb.nonNullable.group({
-        participanteCedenteId: ['', Validators.required],
-        participanteBeneficiarioId: ['', Validators.required],
-        analistaResponsavel: [''],
-        numeroUc: [{ value: '', disabled: true }],
+        contratoId: ['', Validators.required],
+        mesAnoReferencia: ['', [Validators.required, Validators.maxLength(7)]],
         dataInicialPeriodo: this.fb.control<Date | null>(null, Validators.required),
         dataFinalPeriodo: this.fb.control<Date | null>(null, Validators.required),
-        mesAnoReferencia: ['', Validators.required],
-        dataLimitePagamentoConta: this.fb.control<Date | null>(null),
-        dataLimitePagamentoCedente: this.fb.control<Date | null>(null),
-        dataLimitePagamentoContratada: this.fb.control<Date | null>(null),
+        dataLimitePagamentoConta: this.fb.control<Date | null>(null, Validators.required),
+        dataLimitePagamentoCedente: this.fb.control<Date | null>(null, Validators.required),
+        dataLimitePagamentoContratada: this.fb.control<Date | null>(null, Validators.required),
         creditoUtilizado: [0],
         energiaConsumidaValorTusdAtiva: [0],
         energiaConsumidaValorTeAtiva: [0],
@@ -59,17 +69,15 @@ export class MovimentoForm implements OnInit {
         creditoUtilizadoValorTeInjetada: [0],
         creditoUtilizadoBandeira: [0],
         valorTotalSemDesconto: [{ value: 0, disabled: true }],
-        percentualDesconto: [{ value: 0, disabled: true }],
-        desconto: [{ value: 0, disabled: true }],
+        valorDesconto: [{ value: 0, disabled: true }],
         valorTotalComDesconto: [{ value: 0, disabled: true }],
         valorCpfl: [0],
         valorPagoParaCedente: [{ value: 0, disabled: true }],
-        tipoNegociacao: [{ value: '', disabled: true }],
-        valorNegociacao: [{ value: 0, disabled: true }],
+        valorEmissaoNotaFiscal: this.fb.control<number | null>({ value: null, disabled: true }),
         valorPagoParaContratada: [{ value: 0, disabled: true }],
         valorTotalPagoComCreditos: [{ value: 0, disabled: true }],
         valorTotalPagoSemCreditos: [{ value: 0, disabled: true }],
-        economia: [{ value: 0, disabled: true }],
+        valorEconomia: [{ value: 0, disabled: true }],
         saldoRestante: [0]
     });
 
@@ -78,7 +86,7 @@ export class MovimentoForm implements OnInit {
     constructor(
         private readonly router: Router,
         private readonly route: ActivatedRoute,
-        private readonly messageService: MessageService,
+        private readonly messageService: MessageService
     ) {}
 
     private readonly camposDadosParaCalculos = [
@@ -98,14 +106,20 @@ export class MovimentoForm implements OnInit {
         this.editando.set(!!this.movimentoId);
 
         this.tiposNegociacao.set(this.tipoNegociacaoService.listar());
-        this.carregarParticipantes();
+        this.statusContrato.set(this.statusContratoService.listar());
+        this.bandeirasTipoCobranca.set(this.bandeiraTipoCobrancaService.listar());
+        this.basesCalculo.set(this.baseCalculoService.listar());
+        this.tiposNotaFiscalEmissao.set(this.notaFiscalTipoEmissaoService.listar());
+        this.carregarContratos();
 
         merge(...this.camposDadosParaCalculos.map((campo) => this.form.controls[campo].valueChanges))
             .pipe(debounceTime(500))
             .subscribe(() => this.calcular());
 
-        this.form.controls.participanteCedenteId.valueChanges.subscribe((id) => this.obterCedenteSelecionado(id));
-        this.form.controls.participanteBeneficiarioId.valueChanges.subscribe((id) => this.obterBeneficiarioSelecionado(id));
+        this.form.controls.contratoId.valueChanges.subscribe((id) => {
+            this.contratoIdSelecionado.set(id);
+            this.obterContratoSelecionado(id);
+        });
 
         if (this.movimentoId) {
             this.carregarMovimento(this.movimentoId);
@@ -128,14 +142,13 @@ export class MovimentoForm implements OnInit {
 
     preencherFormulario(movimento: any) {
         this.form.patchValue({
-            participanteCedenteId: movimento.participanteCedenteId,
-            participanteBeneficiarioId: movimento.participanteBeneficiarioId,
+            contratoId: movimento.contratoId,
             mesAnoReferencia: movimento.mesAnoReferencia ?? '',
             dataInicialPeriodo: this.paraData(movimento.dataInicialPeriodo),
             dataFinalPeriodo: this.paraData(movimento.dataFinalPeriodo),
-            dataLimitePagamentoConta: movimento.dataLimitePagamentoConta ? this.paraData(movimento.dataLimitePagamentoConta) : null,
-            dataLimitePagamentoCedente: movimento.dataLimitePagamentoCedente ? this.paraData(movimento.dataLimitePagamentoCedente) : null,
-            dataLimitePagamentoContratada: movimento.dataLimitePagamentoContratada ? this.paraData(movimento.dataLimitePagamentoContratada) : null,
+            dataLimitePagamentoConta: this.paraData(movimento.dataLimitePagamentoConta),
+            dataLimitePagamentoCedente: this.paraData(movimento.dataLimitePagamentoCedente),
+            dataLimitePagamentoContratada: this.paraData(movimento.dataLimitePagamentoContratada),
             creditoUtilizado: movimento.creditoUtilizado,
             energiaConsumidaValorTusdAtiva: movimento.energiaConsumidaValorTusdAtiva,
             energiaConsumidaValorTeAtiva: movimento.energiaConsumidaValorTeAtiva,
@@ -145,69 +158,49 @@ export class MovimentoForm implements OnInit {
             creditoUtilizadoValorTeInjetada: movimento.creditoUtilizadoValorTeInjetada,
             creditoUtilizadoBandeira: movimento.creditoUtilizadoBandeira,
             valorTotalSemDesconto: movimento.valorTotalSemDesconto,
-            percentualDesconto: movimento.percentualDesconto,
-            desconto: movimento.desconto,
+            valorDesconto: movimento.valorDesconto,
             valorTotalComDesconto: movimento.valorTotalComDesconto,
             valorCpfl: movimento.valorCpfl,
             valorPagoParaCedente: movimento.valorPagoParaCedente,
-            tipoNegociacao: movimento.tipoNegociacao,
-            valorNegociacao: movimento.valorNegociacao,
+            valorEmissaoNotaFiscal: movimento.valorEmissaoNotaFiscal ?? null,
             valorPagoParaContratada: movimento.valorPagoParaContratada,
             valorTotalPagoComCreditos: movimento.valorTotalPagoComCreditos,
             valorTotalPagoSemCreditos: movimento.valorTotalPagoSemCreditos,
-            economia: movimento.economia,
+            valorEconomia: movimento.valorEconomia,
             saldoRestante: movimento.saldoRestante
         });
     }
 
-    private carregarParticipantes() {
-        this.participanteService.listar().subscribe({
+    private carregarContratos() {
+        this.contratoService.listar().subscribe({
             next: (resposta) => {
                 const items = resposta.items ?? [];
-                this.cedentes.set(items.filter((participante: any) => participante.flagCedente));
-                this.beneficiarios.set(items.filter((participante: any) => participante.flagBeneficiario));
-            }
-        });
-    }
-
-    private obterCedenteSelecionado(id: string) {
-        if (!id) {
-            this.cedenteSelecionado.set(null);
-            return;
-        }
-
-        this.participanteService.obter(id).subscribe({
-            next: (resposta) => {
-                this.cedenteSelecionado.set(resposta.items ?? null);
-                this.form.patchValue(
-                    {
-                        tipoNegociacao: this.cedenteSelecionado().cedente?.tipoNegociacao || '',
-                        valorNegociacao: this.cedenteSelecionado().cedente?.valorNegociacao || 0
-                    },
-                    { emitEvent: false }
+                this.contratos.set(
+                    items.map((contrato: any) => ({
+                        ...contrato,
+                        descricaoSelecao: `${contrato.cedente?.nome ?? '?'} (UC ${contrato.cedenteNumeroUc ?? '?'}) → ${contrato.beneficiario?.nome ?? '?'} (UC ${contrato.beneficiarioNumeroUc ?? '?'})`
+                    }))
                 );
             }
         });
     }
 
-    private obterBeneficiarioSelecionado(id: string) {
+    private obterContratoSelecionado(id: string) {
         if (!id) {
-            this.beneficiarioSelecionado.set(null);
+            this.contratoSelecionado.set(null);
             return;
         }
 
-        this.participanteService.obter(id).subscribe({
+        this.contratoService.obter(id).subscribe({
             next: (resposta) => {
-                this.beneficiarioSelecionado.set(resposta.items ?? null);
-                this.form.patchValue(
-                    {
-                        numeroUc: this.beneficiarioSelecionado().beneficiario?.numeroUc || '',
-                        percentualDesconto: this.beneficiarioSelecionado().beneficiario?.desconto || 0
-                    },
-                    { emitEvent: false }
-                );
+                this.contratoSelecionado.set(resposta.items ?? null);
+                this.calcular();
             }
         });
+    }
+
+    descricao(lista: any[], id: string): string {
+        return lista.find((item) => item.id === id)?.descricao ?? id;
     }
 
     private paraData(valor: string): Date {
@@ -220,53 +213,53 @@ export class MovimentoForm implements OnInit {
         const mes = String(data.getMonth() + 1).padStart(2, '0');
         const dia = String(data.getDate()).padStart(2, '0');
         return `${ano}-${mes}-${dia}`;
-    }    
+    }
 
     private voltarParaListagem() {
         this.router.navigate(['/pages/movimentos']);
-    }    
+    }
 
     private aoSalvarComSucesso(mensagem: string | undefined) {
         this.salvando.set(false);
         this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: mensagem ?? 'Movimento salvo com sucesso.', life: 3000 });
         this.voltarParaListagem();
-    }    
+    }
 
     calcular() {
-        if (this.cedenteSelecionado() === null || this.beneficiarioSelecionado() === null) {
+        const contrato = this.contratoSelecionado();
+
+        if (contrato === null) {
             return;
         }
 
-        //Obtendo Valores do Formulário
         const formValue = this.form.getRawValue();
 
-        //Calculando Valores
         const valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
-        const desconto = (valorTotalSemDesconto * formValue.percentualDesconto) / 100;
-        const valorTotalComDesconto = valorTotalSemDesconto - desconto;
-        const valorPagoParaCedente = (valorTotalSemDesconto - desconto) + formValue.creditoUtilizadoBandeira;
+        const valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioDesconto ?? 0)) / 100;
+        const valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
+        const valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoBandeira;
 
         let valorPagoParaContratada = 0;
-        if (formValue.tipoNegociacao === 'Fixo') {
-            valorPagoParaContratada = valorPagoParaCedente - (formValue.creditoUtilizado * formValue.valorNegociacao);
+        if (contrato.cedenteTipoNegociacao === 'Fixo') {
+            valorPagoParaContratada = valorPagoParaCedente - formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0);
         } else {
-            valorPagoParaContratada = valorPagoParaCedente - (formValue.creditoUtilizado * 1);
+            valorPagoParaContratada = valorPagoParaCedente - formValue.creditoUtilizado * 1;
         }
 
         const valorTotalPagoComCreditos = formValue.valorCpfl + valorPagoParaCedente;
         const valorTotalPagoSemCreditos = formValue.energiaConsumidaValorTusdAtiva + formValue.energiaConsumidaValorTeAtiva + formValue.ipCipEncargos + formValue.energiaConsumidaBandeira;
-        const economia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos;
+        const valorEconomia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos;
 
         this.form.patchValue(
             {
                 valorTotalSemDesconto,
-                desconto, 
+                valorDesconto,
                 valorTotalComDesconto,
                 valorPagoParaCedente,
                 valorPagoParaContratada,
                 valorTotalPagoComCreditos,
                 valorTotalPagoSemCreditos,
-                economia
+                valorEconomia
             },
             { emitEvent: false }
         );
@@ -274,7 +267,7 @@ export class MovimentoForm implements OnInit {
 
     salvar() {
         if (this.form.invalid) {
-            alert('Por favor, preencha todos os campos obrigatórios antes de salvar o movimento.');
+            this.form.markAllAsTouched();
             return;
         }
 
@@ -297,9 +290,13 @@ export class MovimentoForm implements OnInit {
         const movimento = this.form.getRawValue();
 
         return {
+            contratoId: movimento.contratoId,
             dataInicialPeriodo: this.paraTexto(movimento.dataInicialPeriodo!),
             dataFinalPeriodo: this.paraTexto(movimento.dataFinalPeriodo!),
-            mesAnoReferencia: movimento.mesAnoReferencia || null,
+            mesAnoReferencia: movimento.mesAnoReferencia,
+            dataLimitePagamentoConta: this.paraTexto(movimento.dataLimitePagamentoConta!),
+            dataLimitePagamentoCedente: this.paraTexto(movimento.dataLimitePagamentoCedente!),
+            dataLimitePagamentoContratada: this.paraTexto(movimento.dataLimitePagamentoContratada!),
             creditoUtilizado: movimento.creditoUtilizado,
             energiaConsumidaValorTusdAtiva: movimento.energiaConsumidaValorTusdAtiva,
             energiaConsumidaValorTeAtiva: movimento.energiaConsumidaValorTeAtiva,
@@ -309,32 +306,21 @@ export class MovimentoForm implements OnInit {
             creditoUtilizadoValorTeInjetada: movimento.creditoUtilizadoValorTeInjetada,
             creditoUtilizadoBandeira: movimento.creditoUtilizadoBandeira,
             valorTotalSemDesconto: movimento.valorTotalSemDesconto,
-            percentualDesconto: movimento.percentualDesconto,
-            desconto: movimento.desconto,
+            valorDesconto: movimento.valorDesconto,
             valorTotalComDesconto: movimento.valorTotalComDesconto,
             valorCpfl: movimento.valorCpfl,
             valorPagoParaCedente: movimento.valorPagoParaCedente,
-            tipoNegociacao: movimento.tipoNegociacao,
-            valorNegociacao: movimento.valorNegociacao,
+            valorEmissaoNotaFiscal: movimento.valorEmissaoNotaFiscal,
             valorPagoParaContratada: movimento.valorPagoParaContratada,
             valorTotalPagoComCreditos: movimento.valorTotalPagoComCreditos,
             valorTotalPagoSemCreditos: movimento.valorTotalPagoSemCreditos,
-            economia: movimento.economia,
-            saldoRestante: movimento.saldoRestante,
-            dataLimitePagamentoConta: movimento.dataLimitePagamentoConta ? this.paraTexto(movimento.dataLimitePagamentoConta) : '',
-            dataLimitePagamentoCedente: movimento.dataLimitePagamentoCedente ? this.paraTexto(movimento.dataLimitePagamentoCedente) : '',
-            dataLimitePagamentoContratada: movimento.dataLimitePagamentoContratada ? this.paraTexto(movimento.dataLimitePagamentoContratada) : ''
+            valorEconomia: movimento.valorEconomia,
+            saldoRestante: movimento.saldoRestante
         };
     }
 
     private montarRequestAdicionar() {
-        const movimento = this.form.getRawValue();
-
-        return {
-            participanteCedenteId: movimento.participanteCedenteId,
-            participanteBeneficiarioId: movimento.participanteBeneficiarioId,
-            ...this.dadosComuns()
-        };
+        return this.dadosComuns();
     }
 
     private montarRequestAtualizar() {
@@ -346,5 +332,5 @@ export class MovimentoForm implements OnInit {
 
     cancelar() {
         this.voltarParaListagem();
-    }    
+    }
 }
