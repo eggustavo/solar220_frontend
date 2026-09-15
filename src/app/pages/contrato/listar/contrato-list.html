@@ -11,22 +11,24 @@
         <ng-template #header>
             <tr>
                 <th scope="col">Início da Operação</th>
-                <th scope="col">Tipo</th>
-                <th scope="col">Status</th>
+                <th scope="col">Nome do Cedente</th>
                 <th scope="col">UC Cedente</th>
+                <th scope="col">Nome do Beneficiário</th>
                 <th scope="col">UC Beneficiário</th>
+                <th scope="col">Status</th>
                 <th scope="col" style="width: 8rem"></th>
             </tr>
         </ng-template>
         <ng-template #body let-contrato>
             <tr>
                 <td>{{ contrato.dataInicioOperacao | date: 'dd/MM/yyyy' }}</td>
-                <td>{{ contrato.tipoContrato }}</td>
+                <td>{{ contrato.cedente?.nome }}</td>
+                <td>{{ contrato.cedenteNumeroUc }}</td>
+                <td>{{ contrato.beneficiario?.nome }}</td>
+                <td>{{ contrato.beneficiarioNumeroUc }}</td>
                 <td>
                     <p-tag [value]="contrato.status" [severity]="contrato.status === 'Ativo' ? 'success' : contrato.status === 'Concluido' ? 'info' : 'secondary'" />
                 </td>
-                <td>{{ contrato.cedenteNumeroUc }}</td>
-                <td>{{ contrato.beneficiarioNumeroUc }}</td>
                 <td>
                     <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="editar(contrato)" pTooltip="Editar"><i class="pi pi-pencil"></i></button>
                     <button pButton [iconOnly]="true" severity="danger" [rounded]="true" [text]="true" (click)="excluir(contrato)" pTooltip="Excluir"><i class="pi pi-trash"></i></button>
@@ -35,7 +37,7 @@
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="6" class="text-center">Nenhum contrato encontrado.</td>
+                <td colspan="7" class="text-center">Nenhum contrato encontrado.</td>
             </tr>
         </ng-template>
     </p-table>

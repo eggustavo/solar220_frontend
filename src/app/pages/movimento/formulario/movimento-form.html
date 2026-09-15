@@ -330,6 +330,7 @@
             </tbody>
         </table>
         <div class="form-actions flex justify-end gap-2 mt-3">
+            <button pButton type="button" severity="secondary" outlined [disabled]="!memoriaCalculoTexto()" (click)="abrirMemoriaCalculo()"><i class="pi pi-list"></i>Memória de cálculo</button>
             <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
             <button pButton type="submit" [disabled]="salvando()">
                 @if (salvando()) {
@@ -339,6 +340,10 @@
                 }
                 Salvar
             </button>
-        </div>        
+        </div>
     </form>
+
+    <p-dialog header="Memória de Cálculo" [visible]="memoriaCalculoVisivel()" (visibleChange)="memoriaCalculoVisivel.set($event)" [modal]="true" [style]="{ width: '50vw' }" [breakpoints]="{ '960px': '90vw' }">
+        <pre class="memoria-calculo-texto">{{ memoriaCalculoTexto() }}</pre>
+    </p-dialog>
 </div>

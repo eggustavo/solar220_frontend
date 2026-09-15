@@ -83,3 +83,14 @@
     padding-bottom: 0.75rem;
     box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.08);
 }
+
+.memoria-calculo-texto {
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    max-height: 65vh;
+    overflow-y: auto;
+    margin: 0;
+}
