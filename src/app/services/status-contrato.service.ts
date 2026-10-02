@@ -13,8 +13,8 @@ export class StatusContratoService {
                 descricao: 'Inativo'
             },
             {
-                id: 'Concluido',
-                descricao: 'Concluído'
+                id: 'EmDigitacao',
+                descricao: 'Em Digitação'
             }
         ];
     }

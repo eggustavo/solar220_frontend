@@ -348,12 +348,9 @@ export class MovimentoForm implements OnInit {
                 break;
             case 'Emissao220':
             case 'EmissaoCedente':
+            case 'EmissaoCompartilhada':
                 valorEmissaoNotaFiscal = (valorBaseCalculoNotaFiscal * contrato.notaFiscalPercentualEmissao) / 100;
                 passos.push(`   Tipo de emissão = ${contrato.notaFiscalTipoEmissao} → valorEmissaoNotaFiscal = valorBaseCalculoNotaFiscal × percentualEmissao / 100 = ${moeda(valorBaseCalculoNotaFiscal)} × ${contrato.notaFiscalPercentualEmissao}% = ${moeda(valorEmissaoNotaFiscal)}`);
-                break;
-            case 'EmissaoCompartilhada':
-                valorEmissaoNotaFiscal = 0;
-                passos.push(`   Tipo de emissão = EmissaoCompartilhada → valorEmissaoNotaFiscal = ${moeda(valorEmissaoNotaFiscal)}`);
                 break;
             default:
                 valorEmissaoNotaFiscal = 0;
@@ -364,33 +361,35 @@ export class MovimentoForm implements OnInit {
 
         //Apurar Valor Pago Para Contratada
         passos.push('6) Valor a ser pago para a contratada');
+        const valorPagoParaContratadaAntes = valorPagoParaContratada;
         if (contrato.cedenteTipoNegociacao === 'Fixo') {
-            const incremento = valorBaseCalculoCedente - (formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0)) + valorEmissaoNotaFiscal;
+            const valorCreditoNegociado = formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0);
+            const incremento = valorBaseCalculoCedente - valorCreditoNegociado + valorEmissaoNotaFiscal;
             valorPagoParaContratada += incremento;
-            passos.push(`   Negociação Fixo → valorPagoParaContratada += valorBaseCalculoCedente - (créditoUtilizado × valorNegociação) + valorEmissaoNotaFiscal`);
-            passos.push(`                    = ${moeda(valorBaseCalculoCedente)} - (${formValue.creditoUtilizado} × ${contrato.cedenteValorNegociacao ?? 0}) + ${moeda(valorEmissaoNotaFiscal)} = ${moeda(incremento)}`);
+            passos.push(`   Negociação Fixo → incremento = valorBaseCalculoCedente - (créditoUtilizado × valorNegociação) + valorEmissaoNotaFiscal`,
+                `                   = ${moeda(valorBaseCalculoCedente)} - (${formValue.creditoUtilizado} × ${contrato.cedenteValorNegociacao ?? 0}) + ${moeda(valorEmissaoNotaFiscal)}`,
+                `                   = ${moeda(valorBaseCalculoCedente)} - ${moeda(valorCreditoNegociado)} + ${moeda(valorEmissaoNotaFiscal)} = ${moeda(incremento)}`);
+        } else if (contrato.notaFiscalTipoEmissao == 'NaoSeAplica' || contrato.notaFiscalTipoEmissao == 'EmissaoCedente') {
+            const incremento = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
+            valorPagoParaContratada += incremento;
+            passos.push(`   Negociação percentual, NF ${contrato.notaFiscalTipoEmissao} → incremento = valorBaseCalculoCedente × (100 - valorNegociação) / 100`,
+                `                   = ${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100 = ${moeda(incremento)}`);
+        } else if (contrato.notaFiscalTipoEmissao == 'Emissao220') {
+            const parte1 = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
+            const parte2 = (valorEmissaoNotaFiscal * (100 - contrato.cedenteValorNegociacao)) / 100;
+            valorPagoParaContratada += parte1 + parte2;
+            passos.push(`   Negociação percentual, NF Emissao220 → incremento = (valorBaseCalculoCedente × (100 - valorNegociação) / 100) + (valorEmissaoNotaFiscal × (100 - valorNegociação) / 100)`,
+                `                   = (${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100) + (${moeda(valorEmissaoNotaFiscal)} × (100 - ${contrato.cedenteValorNegociacao}) / 100)`,
+                `                   = ${moeda(parte1)} + ${moeda(parte2)} = ${moeda(parte1 + parte2)}`);
         } else {
-            if (contrato.notaFiscalTipoEmissao == 'NaoSeAplica') {
-                const incremento = (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
-                valorPagoParaContratada += incremento;
-                passos.push(`   Negociação percentual, NF NaoSeAplica → += valorBaseCalculoCedente × valorNegociação / 100 = ${moeda(valorBaseCalculoCedente)} × ${contrato.cedenteValorNegociacao}% = ${moeda(incremento)}`);
-            } else if (contrato.notaFiscalTipoEmissao == 'Emissao220') {
-                const parte1 = (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
-                const parte2 = (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100;
-                valorPagoParaContratada += parte1 + parte2;
-                passos.push(`   Negociação percentual, NF Emissao220 → += (valorBaseCalculoCedente × valorNegociação / 100) + (valorEmissaoNotaFiscal × valorNegociação / 100)`);
-                passos.push(`                                          = ${moeda(parte1)} + ${moeda(parte2)} = ${moeda(parte1 + parte2)}`);
-            } else if (contrato.notaFiscalTipoEmissao == 'EmissaoCedente') {
-                const incremento = (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
-                valorPagoParaContratada += incremento;
-                passos.push(`   Negociação percentual, NF EmissaoCedente → += valorBaseCalculoCedente × valorNegociação / 100 = ${moeda(valorBaseCalculoCedente)} × ${contrato.cedenteValorNegociacao}% = ${moeda(incremento)}`);
-            } else {
-                const incremento = (valorBaseCalculoCedente * contrato.cedenteValorNegociacao) / 100;
-                valorPagoParaContratada += incremento;
-                passos.push(`   Negociação percentual, NF ${contrato.notaFiscalTipoEmissao} (padrão) → += valorBaseCalculoCedente × valorNegociação / 100 = ${moeda(valorBaseCalculoCedente)} × ${contrato.cedenteValorNegociacao}% = ${moeda(incremento)}`);
-            }
+            const incremento = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
+            const valorEmissaoNotaFiscal220 = (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100;
+            valorPagoParaContratada += incremento + valorEmissaoNotaFiscal220;
+            passos.push(`   Negociação percentual, NF ${contrato.notaFiscalTipoEmissao} → incremento = (valorBaseCalculoCedente × (100 - valorNegociação) / 100) + (valorEmissaoNotaFiscal × valorNegociação / 100)`,
+                `                   = (${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100) + (${moeda(valorEmissaoNotaFiscal)} × ${contrato.cedenteValorNegociacao} / 100)`,
+                `                   = ${moeda(incremento)} + ${moeda(valorEmissaoNotaFiscal220)} = ${moeda(incremento + valorEmissaoNotaFiscal220)}`);
         }
-        passos.push(`   valorPagoParaContratada (total) = ${moeda(valorPagoParaContratada)}`);
+        passos.push(`   valorPagoParaContratada = valorPagoParaContratada (parcial) + incremento = ${moeda(valorPagoParaContratadaAntes)} + ${moeda(valorPagoParaContratada - valorPagoParaContratadaAntes)} = ${moeda(valorPagoParaContratada)}`);
         passos.push('');
 
         const valorTotalPagoComCreditos = formValue.valorCpfl + valorPagoParaCedente;
@@ -404,11 +403,11 @@ export class MovimentoForm implements OnInit {
         passos.push('');
 
         const valorEmissaoNotaFiscalCedente = contrato.notaFiscalTipoEmissao == 'EmissaoCedente'
-            ? (valorEmissaoNotaFiscal * (100 - contrato.cedenteValorNegociacao)) / 100
+            ? (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100
             : 0;
 
         passos.push('8) Valor de emissão de nota fiscal absorvido pelo cedente');
-        passos.push(`   valorEmissaoNotaFiscalCedente = (tipoEmissao === 'EmissaoCedente' ? valorEmissaoNotaFiscal × (100 - valorNegociação) / 100 : 0) = ${moeda(valorEmissaoNotaFiscalCedente)}`);
+        passos.push(`   valorEmissaoNotaFiscalCedente = (tipoEmissao === 'EmissaoCedente' ? valorEmissaoNotaFiscal × valorNegociação / 100 : 0) = ${moeda(valorEmissaoNotaFiscalCedente)}`);
         passos.push('');
 
         //Apurar Valor Final Pago Para Cedente
