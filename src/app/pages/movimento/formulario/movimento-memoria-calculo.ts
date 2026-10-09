@@ -33,10 +33,6 @@ export interface ResultadoCalculo {
     valorBaseCalculoCedente: number;
     valorBaseCalculoNotaFiscal: number;
     valorEmissaoNotaFiscal: number;
-    valorCreditoNegociado: number;
-    valorContratadaSobreCedente: number;
-    valorContratadaSobreNotaFiscal: number;
-    valorAdicionalContratada: number;
     valorPagoParaContratada: number;
     valorTotalPagoComCreditos: number;
     valorTotalPagoSemCreditos: number;
@@ -64,7 +60,8 @@ class MemoriaCalculo {
     }
 
     /** Lista de variáveis alinhadas: nome = valor (descrição) */
-    variaveis(lista: [nome: string, valor: string, descricao: string][]) {
+    variaveis(entradas: [nome: string, valor: string | null | undefined, descricao: string][]) {
+        const lista = entradas.map(([nome, valor, descricao]) => [nome, valor ?? '-', descricao] as const);
         const larguraNome = Math.max(...lista.map(([nome]) => nome.length));
         const larguraValor = Math.max(...lista.map(([, valor]) => valor.length));
         for (const [nome, valor, descricao] of lista) {
@@ -93,7 +90,7 @@ export function gerarMemoriaCalculo(entrada: DadosEntradaCalculo, contrato: Cont
     etapaValoresIniciais(m, entrada, contrato, r);
     etapaBasesCalculo(m, contrato, r);
     etapaEmissaoNotaFiscal(m, contrato, r);
-    etapaPagamentoContratada(m, entrada, contrato, r);
+    etapaPagamentoContratada(m, contrato, r);
     etapaTotaisEconomia(m, entrada, r);
     etapaNotaFiscalCedente(m, contrato, r);
     etapaPagamentoCedente(m, entrada, contrato, r);
@@ -187,37 +184,10 @@ function etapaEmissaoNotaFiscal(m: MemoriaCalculo, contrato: ContratoCalculo, r:
     }
 }
 
-function etapaPagamentoContratada(m: MemoriaCalculo, entrada: DadosEntradaCalculo, contrato: ContratoCalculo, r: ResultadoCalculo) {
-    const negociacao = numero(contrato.cedenteValorNegociacao);
-
+function etapaPagamentoContratada(m: MemoriaCalculo, contrato: ContratoCalculo, r: ResultadoCalculo) {
     m.titulo('6) Valor a ser pago para a contratada');
-
-    if (contrato.cedenteTipoNegociacao === 'Fixo') {
-        m.regra('cedenteTipoNegociacao = Fixo');
-        m.formula('valorCreditoNegociado', 'creditoUtilizado × cedenteValorNegociacao', `${numero(entrada.creditoUtilizado)} × ${negociacao}`, r.valorCreditoNegociado);
-        m.formula('valorAdicionalContratada', 'valorBaseCalculoCedente - valorCreditoNegociado + valorEmissaoNotaFiscal',
-            `${moeda(r.valorBaseCalculoCedente)} - ${moeda(r.valorCreditoNegociado)} + ${moeda(r.valorEmissaoNotaFiscal)}`, r.valorAdicionalContratada);
-    } else {
-        m.regra(`cedenteTipoNegociacao = ${contrato.cedenteTipoNegociacao}, notaFiscalTipoEmissao = ${contrato.notaFiscalTipoEmissao}`);
-        m.formula('valorContratadaSobreCedente', 'valorBaseCalculoCedente × (100 - cedenteValorNegociacao) / 100',
-            `${moeda(r.valorBaseCalculoCedente)} × (100 - ${negociacao}) / 100`, r.valorContratadaSobreCedente);
-
-        if (contrato.notaFiscalTipoEmissao === 'Emissao220') {
-            m.formula('valorContratadaSobreNotaFiscal', 'valorEmissaoNotaFiscal × (100 - cedenteValorNegociacao) / 100',
-                `${moeda(r.valorEmissaoNotaFiscal)} × (100 - ${negociacao}) / 100`, r.valorContratadaSobreNotaFiscal);
-        } else if (contrato.notaFiscalTipoEmissao === 'NaoSeAplica' || contrato.notaFiscalTipoEmissao === 'EmissaoCedente') {
-            m.formula('valorContratadaSobreNotaFiscal', '0', moeda(0), r.valorContratadaSobreNotaFiscal);
-        } else {
-            m.formula('valorContratadaSobreNotaFiscal', 'valorEmissaoNotaFiscal × cedenteValorNegociacao / 100',
-                `${moeda(r.valorEmissaoNotaFiscal)} × ${negociacao} / 100`, r.valorContratadaSobreNotaFiscal);
-        }
-
-        m.formula('valorAdicionalContratada', 'valorContratadaSobreCedente + valorContratadaSobreNotaFiscal',
-            `${moeda(r.valorContratadaSobreCedente)} + ${moeda(r.valorContratadaSobreNotaFiscal)}`, r.valorAdicionalContratada);
-    }
-
-    m.formula('valorPagoParaContratada', 'valorPagoParaContratadaParcial + valorAdicionalContratada',
-        `${moeda(r.valorPagoParaContratadaParcial)} + ${moeda(r.valorAdicionalContratada)}`, r.valorPagoParaContratada);
+    m.regra(`cedenteTipoNegociacao = ${contrato.cedenteTipoNegociacao}, notaFiscalTipoEmissao = ${contrato.notaFiscalTipoEmissao}`);
+    m.formula('valorPagoParaContratada', moeda(r.valorPagoParaContratada), moeda(r.valorPagoParaContratada), r.valorPagoParaContratada);
 }
 
 function etapaTotaisEconomia(m: MemoriaCalculo, entrada: DadosEntradaCalculo, r: ResultadoCalculo) {

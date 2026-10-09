@@ -241,11 +241,7 @@ export class MovimentoForm implements OnInit {
         }
 
         const entrada = this.form.getRawValue();
-        const resultado = this.calcularValores(entrada, contrato);
-
-        this.memoriaCalculoTexto.set(gerarMemoriaCalculo(entrada, contrato, resultado));
-
-        console.log('Resultado do cálculo:', resultado);
+        const resultado = this.calcularValores(entrada, contrato);        
 
         this.form.patchValue(
             {
@@ -261,6 +257,13 @@ export class MovimentoForm implements OnInit {
             },
             { emitEvent: false }
         );
+
+        try {
+            this.memoriaCalculoTexto.set(gerarMemoriaCalculo(entrada, contrato, resultado));
+        } catch (erro) {
+            console.error('Erro ao gerar a memória de cálculo:', erro);
+            this.memoriaCalculoTexto.set('Não foi possível gerar a memória de cálculo.');
+        }
     }
 
     private calcularValores(entrada: DadosEntradaCalculo, contrato: ContratoCalculo): ResultadoCalculo {
@@ -325,8 +328,6 @@ export class MovimentoForm implements OnInit {
                 break;
         }
 
-        alert('Valor pago para contratada: ' + valorPagoParaContratada);
-
         //Totais pagos e economia
         const valorTotalPagoComCreditos = entrada.valorCpfl + valorPagoParaCedenteParcial;
         const valorTotalPagoSemCreditos = entrada.energiaConsumidaValorTusdAtiva + entrada.energiaConsumidaValorTeAtiva + entrada.ipCipEncargos + entrada.energiaConsumidaBandeira;
@@ -338,11 +339,6 @@ export class MovimentoForm implements OnInit {
             ? valorPagoParaCedenteParcial + valorEmissaoNotaFiscalCedente + entrada.valorCpfl
             : valorPagoParaCedenteParcial + valorEmissaoNotaFiscalCedente;
 
-        const valorCreditoNegociado = 0;
-        const valorContratadaSobreCedente = 0;
-        const valorContratadaSobreNotaFiscal = 0;
-        const valorAdicionalContratada = 0;
-
         return {
             valorTotalSemDesconto,
             valorDesconto,
@@ -352,10 +348,6 @@ export class MovimentoForm implements OnInit {
             valorBaseCalculoCedente,
             valorBaseCalculoNotaFiscal,
             valorEmissaoNotaFiscal,
-            valorCreditoNegociado,
-            valorContratadaSobreCedente,
-            valorContratadaSobreNotaFiscal,
-            valorAdicionalContratada,
             valorPagoParaContratada,
             valorTotalPagoComCreditos,
             valorTotalPagoSemCreditos,
