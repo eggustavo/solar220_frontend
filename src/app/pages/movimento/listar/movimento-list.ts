@@ -171,8 +171,6 @@ export class MovimentoList implements OnInit {
     imprimirDemonstrativo(movimento: any, flagCedente: number) {
         this.loading.set(true);
 
-        console.log(movimento);
-
         this.movimentoService.gerarDemonstrativo(movimento.contrato.contratoId ?? movimento.contrato?.id,flagCedente, movimento.mesAnoReferencia, movimento.id).subscribe({
             next: (resposta: any) => {
                 const file = new Blob([resposta], { type: 'application/pdf' });
