@@ -15,7 +15,48 @@
                 <tr>
                     <td class="label"><label for="contratoId">Contrato:</label></td>
                     <td class="value" colspan="2">
-                        <p-select inputId="contratoId" formControlName="contratoId" [options]="contratos()" optionLabel="descricaoSelecao" optionValue="id" placeholder="Selecione" fluid appendTo="body" filter="true" filterBy="descricaoSelecao" />
+                        <p-select
+                            inputId="contratoId"
+                            formControlName="contratoId"
+                            [options]="contratos()"
+                            optionLabel="cedente.nome"
+                            optionValue="id"
+                            placeholder="Selecione"
+                            fluid
+                            appendTo="body"
+                            panelStyleClass="contrato-select-panel"
+                            filter="true"
+                            filterBy="cedente.nome,cedenteNumeroUc,beneficiario.nome,beneficiarioNumeroUc"
+                        >
+                            <ng-template #selectedItem let-contrato>
+                                <div class="contrato-selecionado" [title]="descricaoCompletaContrato(contrato)">
+                                    <div class="contrato-selecionado-linha">
+                                        <span class="contrato-rotulo">Cedente</span>
+                                        <span class="contrato-selecionado-nome">{{ contrato.cedente?.nome }}</span>
+                                        <span class="contrato-uc">UC {{ contrato.cedenteNumeroUc }}</span>
+                                    </div>
+                                    <div class="contrato-selecionado-linha">
+                                        <span class="contrato-rotulo">Beneficiário</span>
+                                        <span class="contrato-selecionado-nome">{{ contrato.beneficiario?.nome }}</span>
+                                        <span class="contrato-uc">UC {{ contrato.beneficiarioNumeroUc }}</span>
+                                    </div>
+                                </div>
+                            </ng-template>
+                            <ng-template #item let-contrato>
+                                <div class="contrato-opcao">
+                                    <div>
+                                        <div class="contrato-opcao-titulo">Cedente</div>
+                                        <div>{{ contrato.cedente?.nome }}</div>
+                                        <div class="contrato-opcao-uc">UC {{ contrato.cedenteNumeroUc }}</div>
+                                    </div>
+                                    <div>
+                                        <div class="contrato-opcao-titulo">Beneficiário</div>
+                                        <div>{{ contrato.beneficiario?.nome }}</div>
+                                        <div class="contrato-opcao-uc">UC {{ contrato.beneficiarioNumeroUc }}</div>
+                                    </div>
+                                </div>
+                            </ng-template>
+                        </p-select>
                         @if (form.controls.contratoId.invalid && form.controls.contratoId.touched) {
                             <small class="text-red-500">Campo obrigatório.</small>
                         }

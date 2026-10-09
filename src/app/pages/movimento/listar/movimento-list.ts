@@ -2,9 +2,12 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
+import { MovimentoAnexoService } from '@/app/services/movimento-anexo.service';
 import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { FileUploadModule, FileUploadHandlerEvent } from 'primeng/fileupload';
 import { MenuModule } from 'primeng/menu';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
@@ -14,8 +17,9 @@ import { TooltipModule } from 'primeng/tooltip';
 @Component({
     selector: 'app-movimento-list',
     standalone: true,
-    imports: [CommonModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule],
+    imports: [CommonModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule, DialogModule, FileUploadModule],
     templateUrl: './movimento-list.html',
+    styleUrl: './movimento-list.scss',
     changeDetection: ChangeDetectionStrategy.Eager,
     providers: [ConfirmationService]
 })
@@ -26,8 +30,15 @@ export class MovimentoList implements OnInit {
 
     menuItems: MenuItem[] = [];
 
+    anexosVisivel = signal<boolean>(false);
+    anexos = signal<any[]>([]);
+    anexosCarregando = signal<boolean>(false);
+    anexoEnviando = signal<boolean>(false);
+    movimentoSelecionadoParaAnexo: any = null;
+
     constructor(
         private readonly movimentoService: MovimentoService,
+        private readonly movimentoAnexoService: MovimentoAnexoService,
         private readonly confirmationService: ConfirmationService,
         private readonly messageService: MessageService,
         private readonly router: Router
@@ -62,6 +73,7 @@ export class MovimentoList implements OnInit {
             { label: 'Editar', icon: 'pi pi-pencil', command: () => this.editar(movimento) },
             { label: 'Excluir', icon: 'pi pi-trash', styleClass: 'text-red-500', command: () => this.excluir(movimento) },
             { separator: true },
+            { label: 'Anexar Documentos', icon: 'pi pi-paperclip', command: () => this.abrirAnexos(movimento) },
             { label: 'Relatório Cedente', icon: 'pi pi-print', command: () => this.imprimirDemonstrativo(movimento, 1) },
             { label: 'Relatório Beneficiário', icon: 'pi pi-file-pdf', command: () => this.imprimirDemonstrativo(movimento, 0) },
             { label: 'Enviar por E-mail', icon: 'pi pi-envelope', command: () => this.enviarPorEmail(movimento) }
@@ -69,10 +81,99 @@ export class MovimentoList implements OnInit {
         menu.toggle(event);
     }
 
+    abrirAnexos(movimento: any) {
+        this.movimentoSelecionadoParaAnexo = movimento;
+        this.anexosVisivel.set(true);
+        this.carregarAnexos();
+    }
+
+    private carregarAnexos() {
+        this.anexosCarregando.set(true);
+
+        this.movimentoAnexoService.listar(this.movimentoSelecionadoParaAnexo.id).subscribe({
+            next: (resposta) => {
+                this.anexos.set(resposta.items ?? []);
+                this.anexosCarregando.set(false);
+            },
+            error: () => this.anexosCarregando.set(false)
+        });
+    }
+
+    enviarAnexo(event: FileUploadHandlerEvent, fileUpload: any) {
+        const arquivo = event.files[0];
+
+        if (!arquivo) {
+            return;
+        }
+
+        this.anexoEnviando.set(true);
+
+        this.movimentoAnexoService.adicionar(this.movimentoSelecionadoParaAnexo.id, arquivo).subscribe({
+            next: (resposta) => {
+                this.anexoEnviando.set(false);
+                fileUpload.clear();
+                this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Anexo adicionado com sucesso.', life: 3000 });
+                this.carregarAnexos();
+            },
+            error: () => {
+                this.anexoEnviando.set(false);
+                fileUpload.clear();
+            }
+        });
+    }
+
+    baixarAnexo(anexo: any) {
+        this.movimentoAnexoService.baixar(anexo.id).subscribe({
+            next: (resposta) => {
+                const file = new Blob([resposta], { type: anexo.tipoConteudo || resposta.type });
+                const fileURL = URL.createObjectURL(file);
+                window.open(fileURL);
+            },
+            error: () => {
+                this.messageService.add({ severity: 'error', summary: 'Erro', detail: 'Não foi possível baixar o anexo.', life: 3000 });
+            }
+        });
+    }
+
+    excluirAnexo(anexo: any) {
+        this.confirmationService.confirm({
+            header: 'Confirmar exclusão',
+            message: `Deseja realmente excluir o anexo "${anexo.nomeOriginal}"?`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { severity: 'danger', label: 'Excluir' },
+            rejectButtonProps: { severity: 'secondary', outlined: true, label: 'Cancelar' },
+            accept: () => {
+                this.movimentoAnexoService.excluir(anexo.id).subscribe({
+                    next: (resposta) => {
+                        this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Anexo excluído com sucesso.', life: 3000 });
+                        this.carregarAnexos();
+                    },
+                    error: () => {}
+                });
+            }
+        });
+    }
+
+    formatarTamanho(bytes: number): string {
+        if (!bytes) {
+            return '0 KB';
+        }
+
+        const kb = bytes / 1024;
+
+        if (kb < 1024) {
+            return `${kb.toFixed(1)} KB`;
+        }
+
+        return `${(kb / 1024).toFixed(1)} MB`;
+    }
+
     imprimirDemonstrativo(movimento: any, flagCedente: number) {
         this.loading.set(true);
 
-        this.movimentoService.gerarDemonstrativo(movimento.id, flagCedente).subscribe({
+        console.log(movimento);
+
+        this.movimentoService.gerarDemonstrativo(movimento.contrato.contratoId ?? movimento.contrato?.id,flagCedente, movimento.mesAnoReferencia, movimento.id).subscribe({
             next: (resposta: any) => {
                 const file = new Blob([resposta], { type: 'application/pdf' });
                 const fileURL = URL.createObjectURL(file);

@@ -104,11 +104,15 @@
                     Dados Bancários
                 </h5>
                 <div class="grid grid-cols-12 gap-4">
-                    <div class="col-span-12 md:col-span-3">
+                    <div class="col-span-12 md:col-span-5">
+                        <label for="banco" class="block mb-2">Banco</label>
+                        <input id="banco" type="text" pInputText formControlName="banco" fluid />
+                    </div>
+                    <div class="col-span-12 md:col-span-2">
                         <label for="tipoChavePix" class="block mb-2">Tipo de Chave PIX</label>
                         <p-select inputId="tipoChavePix" formControlName="tipoChavePix" [options]="tiposChavePix()" optionLabel="descricao" optionValue="id" placeholder="Selecione" [showClear]="true" fluid appendTo="body" filter="true" filterBy="descricao"/>
                     </div>
-                    <div class="col-span-12 md:col-span-9">
+                    <div class="col-span-12 md:col-span-5">
                         <label for="chavePix" class="block mb-2">Chave PIX</label>
                         <input id="chavePix" type="text" pInputText formControlName="chavePix" fluid />
                     </div>

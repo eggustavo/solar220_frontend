@@ -1,0 +1,13 @@
+:host ::ng-deep .anexo-upload.p-fileupload-advanced {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+:host ::ng-deep .anexo-upload .p-fileupload-header {
+    display: none;
+}
+
+:host ::ng-deep .anexo-dialog .p-dialog-content {
+    padding: 0;
+}

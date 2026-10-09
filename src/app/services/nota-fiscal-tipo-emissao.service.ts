@@ -17,8 +17,12 @@ export class NotaFiscalTipoEmissaoService {
                 descricao: 'Emissão pelo cedente'
             },
             {
-                id: 'EmissaoCompartilhada',
-                descricao: 'Emissão compartilhada'
+                id: 'EmissaoCompartilhadaCusto220',
+                descricao: 'Emissão Compartilhada (Custo 220)'
+            },
+            {
+                id: 'EmissaoCompartilhadaCustoCedente',
+                descricao: 'Emissão Compartilhada (Custo Cedente)'
             }
         ];
     }

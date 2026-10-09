@@ -7,7 +7,7 @@
             <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
         </ng-template>
     </p-toolbar>
-    <p-table [value]="contratos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+    <p-table #dt [value]="contratos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
         <ng-template #header>
             <tr>
                 <th scope="col">Início da Operação</th>
@@ -17,6 +17,33 @@
                 <th scope="col">UC Beneficiário</th>
                 <th scope="col">Status</th>
                 <th scope="col" style="width: 8rem"></th>
+            </tr>
+            <tr>
+                <th scope="col">
+                    <p-column-filter type="date" field="dataInicioOperacao" display="row" matchMode="dateIs" [showApplyButton]="false" placeholder="dd/mm/aaaa" ariaLabel="Filtrar início da operação" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="cedente.nome" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar cedente" ariaLabel="Filtrar nome do cedente" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="cedenteNumeroUc" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar UC" ariaLabel="Filtrar UC do cedente" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="beneficiario.nome" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar beneficiário" ariaLabel="Filtrar nome do beneficiário" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="beneficiarioNumeroUc" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar UC" ariaLabel="Filtrar UC do beneficiário" />
+                </th>
+                <th scope="col">
+                    <p-column-filter field="status" matchMode="equals" display="row" [showMenu]="false" [showClearButton]="false">
+                        <ng-template #filter let-value let-filter="filterCallback">
+                            <p-select [ngModel]="value" [options]="statusContrato()" optionLabel="descricao" optionValue="id" placeholder="Todos" [showClear]="true" appendTo="body" fluid ariaLabel="Filtrar status" (onChange)="filter($event.value)" />
+                        </ng-template>
+                    </p-column-filter>
+                </th>
+                <th scope="col">
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="dt.clear()" pTooltip="Limpar filtros"><i class="pi pi-filter-slash"></i></button>
+                </th>
             </tr>
         </ng-template>
         <ng-template #body let-contrato>

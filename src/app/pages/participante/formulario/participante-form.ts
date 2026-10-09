@@ -49,6 +49,7 @@ export class ParticipanteForm implements OnInit {
         flagCedente: [false],
         flagBeneficiario: [false],
         dadosBancario: this.fb.nonNullable.group({
+            banco: [''],
             tipoChavePix: [''],
             chavePix: ['']
         })
@@ -110,6 +111,7 @@ export class ParticipanteForm implements OnInit {
             flagCedente: participante.flagCedente,
             flagBeneficiario: participante.flagBeneficiario,
             dadosBancario: {
+                banco: participante.dadosBancario?.banco ?? '',
                 tipoChavePix: participante.dadosBancario?.tipoChavePix ?? null,
                 chavePix: participante.dadosBancario?.chavePix ?? ''
             }
@@ -207,13 +209,17 @@ export class ParticipanteForm implements OnInit {
     }
 
     private montarBancario() {
-        const { tipoChavePix, chavePix } = this.form.getRawValue().dadosBancario;
+        const { banco, tipoChavePix, chavePix } = this.form.getRawValue().dadosBancario;
 
-        if (!tipoChavePix || !chavePix) {
+        if (!banco && (!tipoChavePix || !chavePix)) {
             return null;
         }
 
-        return { tipoChavePix, chavePix };
+        return {
+            banco: banco || null,
+            tipoChavePix: tipoChavePix || null,
+            chavePix: chavePix || null
+        };
     }
 
     private montarRequestAdicionar() {

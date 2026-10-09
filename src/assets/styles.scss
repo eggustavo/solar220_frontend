@@ -2,3 +2,15 @@
 @use 'primeicons/primeicons.css';
 @use '@/assets/layout/layout.scss';
 @use '@/assets/demo/demo.scss';
+
+// Filtros por coluna do p-table (display="row"): o input ocupa toda a largura da coluna,
+// deixando o espaço do botão de menu (funil) e do botão de limpar
+p-column-filter,
+p-columnfilter {
+    display: block;
+    width: 100%;
+}
+
+.p-datatable-inline-filter .p-datatable-filter-element-container .p-inputtext {
+    width: 100%;
+}

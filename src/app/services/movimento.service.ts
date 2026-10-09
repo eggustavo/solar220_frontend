@@ -30,8 +30,14 @@ export class MovimentoService {
         return this.http.delete<RespostaApi<any>>(`${this.apiUrl}/excluir/${id}`);
     }
 
-    gerarDemonstrativo(movimentoId: string, flagCedente: number): Observable<Blob> {
-        return this.http.get(`${this.apiUrl}/gerar-demonstrativo/${movimentoId}/flag-cedente/${flagCedente}`, {
+    gerarDemonstrativo(contratoId: string, flagCedente: number, mesAnoReferencia: string, movimentoId: string): Observable<Blob> {
+        return this.http.get(`${this.apiUrl}/gerar-demonstrativo`, {
+            params: {
+                contratoId: contratoId,
+                flagCedente: flagCedente,
+                mesAnoReferencia: mesAnoReferencia,
+                movimentoId: movimentoId,
+            },
             responseType: 'blob',
             headers: {
                 'accept': '*/*',

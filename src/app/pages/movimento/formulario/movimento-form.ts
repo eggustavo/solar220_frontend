@@ -20,6 +20,7 @@ import { NotaFiscalTipoEmissaoService } from '@/app/services/nota-fiscal-tipo-em
 import { ActivatedRoute, Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
 import { MessageService } from 'primeng/api';
+import { ContratoCalculo, DadosEntradaCalculo, gerarMemoriaCalculo, ResultadoCalculo, TIPOS_COM_EMISSAO_NOTA_FISCAL } from './movimento-memoria-calculo';
 
 @Component({
     selector: 'app-movimento-form',
@@ -179,13 +180,7 @@ export class MovimentoForm implements OnInit {
     private carregarContratos() {
         this.contratoService.listar().subscribe({
             next: (resposta) => {
-                const items = resposta.items ?? [];
-                this.contratos.set(
-                    items.map((contrato: any) => ({
-                        ...contrato,
-                        descricaoSelecao: `${contrato.cedente?.nome ?? '?'} (UC ${contrato.cedenteNumeroUc ?? '?'}) → ${contrato.beneficiario?.nome ?? '?'} (UC ${contrato.beneficiarioNumeroUc ?? '?'})`
-                    }))
-                );
+                this.contratos.set(resposta.items ?? []);
             }
         });
     }
@@ -202,6 +197,10 @@ export class MovimentoForm implements OnInit {
                 this.calcular();
             }
         });
+    }
+
+    descricaoCompletaContrato(contrato: any): string {
+        return `Cedente: ${contrato.cedente?.nome ?? ''} (UC ${contrato.cedenteNumeroUc ?? ''})\nBeneficiário: ${contrato.beneficiario?.nome ?? ''} (UC ${contrato.beneficiarioNumeroUc ?? ''})`;
     }
 
     descricao(lista: any[], id: string): string {
@@ -230,10 +229,6 @@ export class MovimentoForm implements OnInit {
         this.voltarParaListagem();
     }
 
-    private moeda(valor: number | null | undefined): string {
-        return (valor ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-    }
-
     abrirMemoriaCalculo() {
         this.memoriaCalculoVisivel.set(true);
     }
@@ -245,213 +240,129 @@ export class MovimentoForm implements OnInit {
             return;
         }
 
-        const formValue = this.form.getRawValue();
-        const moeda = (valor: number | null | undefined) => this.moeda(valor);
-        const passos: string[] = [];
+        const entrada = this.form.getRawValue();
+        const resultado = this.calcularValores(entrada, contrato);
 
-        passos.push('1) Dados de entrada do formulário');
-        passos.push(`   - Créditos utilizados: ${formValue.creditoUtilizado} kWh`);
-        passos.push(`   - Valor TUSD Ativa (Energia Consumida): ${moeda(formValue.energiaConsumidaValorTusdAtiva)}`);
-        passos.push(`   - Valor TE Ativa (Energia Consumida): ${moeda(formValue.energiaConsumidaValorTeAtiva)}`);
-        passos.push(`   - Bandeira (Energia Consumida): ${moeda(formValue.energiaConsumidaBandeira)}`);
-        passos.push(`   - IP-CIP / Encargos: ${moeda(formValue.ipCipEncargos)}`);
-        passos.push(`   - Valor TUSD Injetada (Crédito Utilizado): ${moeda(formValue.creditoUtilizadoValorTusdInjetada)}`);
-        passos.push(`   - Valor TE Injetada (Crédito Utilizado): ${moeda(formValue.creditoUtilizadoValorTeInjetada)}`);
-        passos.push(`   - Bandeira (Crédito Utilizado): ${moeda(formValue.creditoUtilizadoBandeira)}`);
-        passos.push(`   - Valor CPFL: ${moeda(formValue.valorCpfl)}`);
-        passos.push('');
-        passos.push('2) Dados do contrato utilizados no cálculo');
-        passos.push(`   - Bandeira Tipo Cobrança: ${contrato.bandeiraTipoCobranca}`);
-        passos.push(`   - Percentual de Desconto do Beneficiário: ${contrato.beneficiarioPercentualDesconto ?? 0}%`);
-        passos.push(`   - Base de Cálculo do Cedente: ${contrato.cedenteBaseCalculo}`);
-        passos.push(`   - Base de Cálculo da Nota Fiscal: ${contrato.notaFiscalBaseCalculo}`);
-        passos.push(`   - Tipo de Emissão da Nota Fiscal: ${contrato.notaFiscalTipoEmissao}`);
-        passos.push(`   - Percentual de Emissão da Nota Fiscal: ${contrato.notaFiscalPercentualEmissao ?? 0}%`);
-        passos.push(`   - Tipo de Negociação do Cedente: ${contrato.cedenteTipoNegociacao}`);
-        passos.push(`   - Valor de Negociação do Cedente: ${contrato.cedenteValorNegociacao}`);
-        passos.push(`   - Valor conta energia incluso no pagamento ao cedente: ${contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente ? 'Sim' : 'Não'}`);
-        passos.push('');
+        this.memoriaCalculoTexto.set(gerarMemoriaCalculo(entrada, contrato, resultado));
 
-        let valorTotalSemDesconto = 0;
-        let valorDesconto = 0;
-        let valorTotalComDesconto = 0;
-        let valorPagoParaCedente = 0;
-        let valorPagoParaContratada = 0;
-
-        passos.push('3) Valor total sem desconto, desconto e valor pago ao cedente (conforme bandeira tipo cobrança)');
-        if (contrato.bandeiraTipoCobranca === 'BandeiraAntesDoDesconto') {
-            passos.push('   Regra aplicada: BandeiraAntesDoDesconto');
-            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada + formValue.creditoUtilizadoValorTeInjetada;
-            passos.push(`   valorTotalSemDesconto = TUSD Injetada + TE Injetada + TE Injetada = ${moeda(formValue.creditoUtilizadoValorTusdInjetada)} + ${moeda(formValue.creditoUtilizadoValorTeInjetada)} + ${moeda(formValue.creditoUtilizadoValorTeInjetada)} = ${moeda(valorTotalSemDesconto)}`);
-
-            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
-            passos.push(`   valorDesconto = valorTotalSemDesconto × percentualDesconto / 100 = ${moeda(valorTotalSemDesconto)} × ${contrato.beneficiarioPercentualDesconto ?? 0}% = ${moeda(valorDesconto)}`);
-
-            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
-            passos.push(`   valorTotalComDesconto = valorTotalSemDesconto - valorDesconto = ${moeda(valorTotalSemDesconto)} - ${moeda(valorDesconto)} = ${moeda(valorTotalComDesconto)}`);
-
-            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto;
-            passos.push(`   valorPagoParaCedente = valorTotalSemDesconto - valorDesconto = ${moeda(valorPagoParaCedente)}`);
-        } else if (contrato.bandeiraTipoCobranca === 'BandeiraAposDesconto') {
-            passos.push('   Regra aplicada: BandeiraAposDesconto');
-            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
-            passos.push(`   valorTotalSemDesconto = TUSD Injetada + TE Injetada = ${moeda(formValue.creditoUtilizadoValorTusdInjetada)} + ${moeda(formValue.creditoUtilizadoValorTeInjetada)} = ${moeda(valorTotalSemDesconto)}`);
-
-            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
-            passos.push(`   valorDesconto = valorTotalSemDesconto × percentualDesconto / 100 = ${moeda(valorTotalSemDesconto)} × ${contrato.beneficiarioPercentualDesconto ?? 0}% = ${moeda(valorDesconto)}`);
-
-            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
-            passos.push(`   valorTotalComDesconto = valorTotalSemDesconto - valorDesconto = ${moeda(valorTotalSemDesconto)} - ${moeda(valorDesconto)} = ${moeda(valorTotalComDesconto)}`);
-
-            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoBandeira;
-            passos.push(`   valorPagoParaCedente = valorTotalComDesconto + Bandeira (Crédito Utilizado) = ${moeda(valorTotalComDesconto)} + ${moeda(formValue.creditoUtilizadoBandeira)} = ${moeda(valorPagoParaCedente)}`);
-        } else {
-            passos.push(`   Regra aplicada: ${contrato.bandeiraTipoCobranca} (padrão)`);
-            valorTotalSemDesconto = formValue.creditoUtilizadoValorTusdInjetada + formValue.creditoUtilizadoValorTeInjetada;
-            passos.push(`   valorTotalSemDesconto = TUSD Injetada + TE Injetada = ${moeda(formValue.creditoUtilizadoValorTusdInjetada)} + ${moeda(formValue.creditoUtilizadoValorTeInjetada)} = ${moeda(valorTotalSemDesconto)}`);
-
-            valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
-            passos.push(`   valorDesconto = valorTotalSemDesconto × percentualDesconto / 100 = ${moeda(valorTotalSemDesconto)} × ${contrato.beneficiarioPercentualDesconto ?? 0}% = ${moeda(valorDesconto)}`);
-
-            valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
-            passos.push(`   valorTotalComDesconto = valorTotalSemDesconto - valorDesconto = ${moeda(valorTotalSemDesconto)} - ${moeda(valorDesconto)} = ${moeda(valorTotalComDesconto)}`);
-
-            valorPagoParaCedente = valorTotalSemDesconto - valorDesconto + formValue.creditoUtilizadoValorTeInjetada;
-            passos.push(`   valorPagoParaCedente = valorTotalComDesconto + TE Injetada = ${moeda(valorTotalComDesconto)} + ${moeda(formValue.creditoUtilizadoValorTeInjetada)} = ${moeda(valorPagoParaCedente)}`);
-
-            valorPagoParaContratada = formValue.creditoUtilizadoValorTeInjetada;
-            passos.push(`   valorPagoParaContratada (parcial) = TE Injetada = ${moeda(valorPagoParaContratada)}`);
-        }
-        passos.push('');
-
-        //Definição das bases de cálculos para o registro do Movimento
-        const valorBaseCalculoCedente = contrato.cedenteBaseCalculo === 'SobreValorLiquido'
-            ? valorTotalComDesconto
-            : valorPagoParaCedente;
-
-        const valorBaseCalculoNotaFiscal = contrato.notaFiscalBaseCalculo === 'SobreValorLiquido'
-            ? valorTotalComDesconto
-            : valorPagoParaCedente;
-
-        passos.push('4) Bases de cálculo (cedente e nota fiscal)');
-        passos.push(`   valorBaseCalculoCedente = (${contrato.cedenteBaseCalculo} === 'SobreValorLiquido' ? valorTotalComDesconto : valorPagoParaCedente) = ${moeda(valorBaseCalculoCedente)}`);
-        passos.push(`   valorBaseCalculoNotaFiscal = (${contrato.notaFiscalBaseCalculo} === 'SobreValorLiquido' ? valorTotalComDesconto : valorPagoParaCedente) = ${moeda(valorBaseCalculoNotaFiscal)}`);
-        passos.push('');
-
-        //Apurar Valor Nota Fiscal
-        let valorEmissaoNotaFiscal;
-        passos.push('5) Valor de emissão da nota fiscal');
-        switch (contrato.notaFiscalTipoEmissao) {
-            case 'NaoSeAplica':
-                valorEmissaoNotaFiscal = 0;
-                passos.push(`   Tipo de emissão = NaoSeAplica → valorEmissaoNotaFiscal = ${moeda(valorEmissaoNotaFiscal)}`);
-                break;
-            case 'Emissao220':
-            case 'EmissaoCedente':
-            case 'EmissaoCompartilhada':
-                valorEmissaoNotaFiscal = (valorBaseCalculoNotaFiscal * contrato.notaFiscalPercentualEmissao) / 100;
-                passos.push(`   Tipo de emissão = ${contrato.notaFiscalTipoEmissao} → valorEmissaoNotaFiscal = valorBaseCalculoNotaFiscal × percentualEmissao / 100 = ${moeda(valorBaseCalculoNotaFiscal)} × ${contrato.notaFiscalPercentualEmissao}% = ${moeda(valorEmissaoNotaFiscal)}`);
-                break;
-            default:
-                valorEmissaoNotaFiscal = 0;
-                passos.push(`   Tipo de emissão não reconhecido (${contrato.notaFiscalTipoEmissao}) → valorEmissaoNotaFiscal = ${moeda(valorEmissaoNotaFiscal)}`);
-                break;
-        }
-        passos.push('');
-
-        //Apurar Valor Pago Para Contratada
-        passos.push('6) Valor a ser pago para a contratada');
-        const valorPagoParaContratadaAntes = valorPagoParaContratada;
-        if (contrato.cedenteTipoNegociacao === 'Fixo') {
-            const valorCreditoNegociado = formValue.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0);
-            const incremento = valorBaseCalculoCedente - valorCreditoNegociado + valorEmissaoNotaFiscal;
-            valorPagoParaContratada += incremento;
-            passos.push(`   Negociação Fixo → incremento = valorBaseCalculoCedente - (créditoUtilizado × valorNegociação) + valorEmissaoNotaFiscal`,
-                `                   = ${moeda(valorBaseCalculoCedente)} - (${formValue.creditoUtilizado} × ${contrato.cedenteValorNegociacao ?? 0}) + ${moeda(valorEmissaoNotaFiscal)}`,
-                `                   = ${moeda(valorBaseCalculoCedente)} - ${moeda(valorCreditoNegociado)} + ${moeda(valorEmissaoNotaFiscal)} = ${moeda(incremento)}`);
-        } else if (contrato.notaFiscalTipoEmissao == 'NaoSeAplica' || contrato.notaFiscalTipoEmissao == 'EmissaoCedente') {
-            const incremento = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
-            valorPagoParaContratada += incremento;
-            passos.push(`   Negociação percentual, NF ${contrato.notaFiscalTipoEmissao} → incremento = valorBaseCalculoCedente × (100 - valorNegociação) / 100`,
-                `                   = ${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100 = ${moeda(incremento)}`);
-        } else if (contrato.notaFiscalTipoEmissao == 'Emissao220') {
-            const parte1 = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
-            const parte2 = (valorEmissaoNotaFiscal * (100 - contrato.cedenteValorNegociacao)) / 100;
-            valorPagoParaContratada += parte1 + parte2;
-            passos.push(`   Negociação percentual, NF Emissao220 → incremento = (valorBaseCalculoCedente × (100 - valorNegociação) / 100) + (valorEmissaoNotaFiscal × (100 - valorNegociação) / 100)`,
-                `                   = (${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100) + (${moeda(valorEmissaoNotaFiscal)} × (100 - ${contrato.cedenteValorNegociacao}) / 100)`,
-                `                   = ${moeda(parte1)} + ${moeda(parte2)} = ${moeda(parte1 + parte2)}`);
-        } else {
-            const incremento = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;
-            const valorEmissaoNotaFiscal220 = (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100;
-            valorPagoParaContratada += incremento + valorEmissaoNotaFiscal220;
-            passos.push(`   Negociação percentual, NF ${contrato.notaFiscalTipoEmissao} → incremento = (valorBaseCalculoCedente × (100 - valorNegociação) / 100) + (valorEmissaoNotaFiscal × valorNegociação / 100)`,
-                `                   = (${moeda(valorBaseCalculoCedente)} × (100 - ${contrato.cedenteValorNegociacao}) / 100) + (${moeda(valorEmissaoNotaFiscal)} × ${contrato.cedenteValorNegociacao} / 100)`,
-                `                   = ${moeda(incremento)} + ${moeda(valorEmissaoNotaFiscal220)} = ${moeda(incremento + valorEmissaoNotaFiscal220)}`);
-        }
-        passos.push(`   valorPagoParaContratada = valorPagoParaContratada (parcial) + incremento = ${moeda(valorPagoParaContratadaAntes)} + ${moeda(valorPagoParaContratada - valorPagoParaContratadaAntes)} = ${moeda(valorPagoParaContratada)}`);
-        passos.push('');
-
-        const valorTotalPagoComCreditos = formValue.valorCpfl + valorPagoParaCedente;
-        const valorTotalPagoSemCreditos = formValue.energiaConsumidaValorTusdAtiva + formValue.energiaConsumidaValorTeAtiva + formValue.ipCipEncargos + formValue.energiaConsumidaBandeira;
-        const valorEconomia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos;
-
-        passos.push('7) Totais pagos e economia');
-        passos.push(`   valorTotalPagoComCreditos = valorCpfl + valorPagoParaCedente = ${moeda(formValue.valorCpfl)} + ${moeda(valorPagoParaCedente)} = ${moeda(valorTotalPagoComCreditos)}`);
-        passos.push(`   valorTotalPagoSemCreditos = TUSD Ativa + TE Ativa + IP-CIP/Encargos + Bandeira (Consumida) = ${moeda(formValue.energiaConsumidaValorTusdAtiva)} + ${moeda(formValue.energiaConsumidaValorTeAtiva)} + ${moeda(formValue.ipCipEncargos)} + ${moeda(formValue.energiaConsumidaBandeira)} = ${moeda(valorTotalPagoSemCreditos)}`);
-        passos.push(`   valorEconomia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos = ${moeda(valorTotalPagoSemCreditos)} - ${moeda(valorTotalPagoComCreditos)} = ${moeda(valorEconomia)}`);
-        passos.push('');
-
-        const valorEmissaoNotaFiscalCedente = contrato.notaFiscalTipoEmissao == 'EmissaoCedente'
-            ? (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100
-            : 0;
-
-        passos.push('8) Valor de emissão de nota fiscal absorvido pelo cedente');
-        passos.push(`   valorEmissaoNotaFiscalCedente = (tipoEmissao === 'EmissaoCedente' ? valorEmissaoNotaFiscal × valorNegociação / 100 : 0) = ${moeda(valorEmissaoNotaFiscalCedente)}`);
-        passos.push('');
-
-        //Apurar Valor Final Pago Para Cedente
-        const valorPagoParaCedenteAntes = valorPagoParaCedente;
-        valorPagoParaCedente = contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente
-            ? valorPagoParaCedente + valorEmissaoNotaFiscalCedente + formValue.valorCpfl
-            : valorPagoParaCedente + valorEmissaoNotaFiscalCedente;
-
-        passos.push('9) Valor final a ser pago ao cedente');
-        if (contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente) {
-            passos.push(`   Conta de energia inclusa no pagamento → valorPagoParaCedente = valorPagoParaCedente + valorEmissaoNotaFiscalCedente + valorCpfl`);
-            passos.push(`                                          = ${moeda(valorPagoParaCedenteAntes)} + ${moeda(valorEmissaoNotaFiscalCedente)} + ${moeda(formValue.valorCpfl)} = ${moeda(valorPagoParaCedente)}`);
-        } else {
-            passos.push(`   Conta de energia NÃO inclusa no pagamento → valorPagoParaCedente = valorPagoParaCedente + valorEmissaoNotaFiscalCedente`);
-            passos.push(`                                                = ${moeda(valorPagoParaCedenteAntes)} + ${moeda(valorEmissaoNotaFiscalCedente)} = ${moeda(valorPagoParaCedente)}`);
-        }
-        passos.push('');
-        passos.push('=== Resultado Final ===');
-        passos.push(`   Valor Total sem Desconto: ${moeda(valorTotalSemDesconto)}`);
-        passos.push(`   Desconto: ${moeda(valorDesconto)}`);
-        passos.push(`   Valor Total com Desconto: ${moeda(valorTotalComDesconto)}`);
-        passos.push(`   Valor a ser pago para o Cedente: ${moeda(valorPagoParaCedente)}`);
-        passos.push(`   Valor de Emissão da Nota Fiscal: ${moeda(valorEmissaoNotaFiscal)}`);
-        passos.push(`   Valor a ser pago para a Contratada: ${moeda(valorPagoParaContratada)}`);
-        passos.push(`   Valor Total Pago com Créditos: ${moeda(valorTotalPagoComCreditos)}`);
-        passos.push(`   Valor Total Pago sem Créditos: ${moeda(valorTotalPagoSemCreditos)}`);
-        passos.push(`   Economia: ${moeda(valorEconomia)}`);
-
-        this.memoriaCalculoTexto.set(passos.join('\n'));
+        console.log('Resultado do cálculo:', resultado);
 
         this.form.patchValue(
             {
-                valorTotalSemDesconto,
-                valorDesconto,
-                valorTotalComDesconto,
-                valorPagoParaCedente,
-                valorEmissaoNotaFiscal,
-                valorPagoParaContratada,
-                valorTotalPagoComCreditos,
-                valorTotalPagoSemCreditos,
-                valorEconomia
+                valorTotalSemDesconto: resultado.valorTotalSemDesconto,
+                valorDesconto: resultado.valorDesconto,
+                valorTotalComDesconto: resultado.valorTotalComDesconto,
+                valorPagoParaCedente: resultado.valorPagoParaCedente,
+                valorEmissaoNotaFiscal: resultado.valorEmissaoNotaFiscal,
+                valorPagoParaContratada: resultado.valorPagoParaContratada,
+                valorTotalPagoComCreditos: resultado.valorTotalPagoComCreditos,
+                valorTotalPagoSemCreditos: resultado.valorTotalPagoSemCreditos,
+                valorEconomia: resultado.valorEconomia
             },
             { emitEvent: false }
         );
+    }
+
+    private calcularValores(entrada: DadosEntradaCalculo, contrato: ContratoCalculo): ResultadoCalculo {
+        //Valor total, desconto e valores parciais (conforme bandeira tipo cobrança)
+        let valorTotalSemDesconto = entrada.creditoUtilizadoValorTusdInjetada + entrada.creditoUtilizadoValorTeInjetada;
+        if (contrato.bandeiraTipoCobranca === 'BandeiraAntesDoDesconto') {
+            valorTotalSemDesconto += entrada.creditoUtilizadoValorTeInjetada;
+        }
+
+        const valorDesconto = (valorTotalSemDesconto * (contrato.beneficiarioPercentualDesconto ?? 0)) / 100;
+        const valorTotalComDesconto = valorTotalSemDesconto - valorDesconto;
+
+        let valorPagoParaCedenteParcial = valorTotalComDesconto;
+        let valorPagoParaContratadaParcial = 0;
+        if (contrato.bandeiraTipoCobranca === 'BandeiraAposDesconto') {
+            valorPagoParaCedenteParcial += entrada.creditoUtilizadoBandeira;
+        } else if (contrato.bandeiraTipoCobranca !== 'BandeiraAntesDoDesconto') {
+            valorPagoParaCedenteParcial += entrada.creditoUtilizadoValorTeInjetada;
+            valorPagoParaContratadaParcial = entrada.creditoUtilizadoValorTeInjetada;
+        }
+
+        //Bases de cálculo
+        const valorBaseCalculoCedente = contrato.cedenteBaseCalculo === 'SobreValorLiquido' ? valorTotalComDesconto : valorPagoParaCedenteParcial;
+        const valorBaseCalculoNotaFiscal = contrato.notaFiscalBaseCalculo === 'SobreValorLiquido' ? valorTotalComDesconto : valorPagoParaCedenteParcial;
+
+        //Valor de emissão da nota fiscal
+        let valorEmissaoNotaFiscal = 0;
+        if (contrato.notaFiscalTipoEmissao !== 'NaoSeAplica') {
+            valorEmissaoNotaFiscal = (valorBaseCalculoNotaFiscal * contrato.notaFiscalPercentualEmissao) / 100;
+        }
+
+        //Valor Compartilhado da Nota Fiscal
+        let valorCompartilhadoCusto220 = 0;
+        let valorCompartilhadoCustoCedente = 0;
+        if (contrato.notaFiscalTipoEmissao === 'EmissaoCompartilhadaCusto220' || contrato.notaFiscalTipoEmissao === 'EmissaoCompartilhadaCustoCedente') {
+            valorCompartilhadoCusto220 = (valorEmissaoNotaFiscal * (100 - contrato.cedenteValorNegociacao)) / 100;
+            valorCompartilhadoCustoCedente = (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100;
+        }
+
+        //Valor pago para a contratada
+        let valorPagoParaContratada = 0;
+        if (contrato.cedenteTipoNegociacao === 'Fixo') {
+            valorPagoParaContratada = valorBaseCalculoCedente -
+                                      entrada.creditoUtilizado * (contrato.cedenteValorNegociacao ?? 0);
+        } else if (contrato.cedenteTipoNegociacao === 'Percentual') {
+            valorPagoParaContratada = (valorBaseCalculoCedente * (100 - contrato.cedenteValorNegociacao)) / 100;             
+        } else { //KWh
+            const cedenteValorNegociacaoCalculado = ((valorTotalSemDesconto / 100) * contrato.cedenteValorNegociacao) / entrada.creditoUtilizado;
+            valorPagoParaContratada = valorBaseCalculoCedente -
+                                      entrada.creditoUtilizado * (cedenteValorNegociacaoCalculado ?? 0);
+        }
+
+        switch (contrato.notaFiscalTipoEmissao) {
+            case 'EmissaoCompartilhadaCusto220':
+                valorPagoParaContratada = valorPagoParaContratada + valorCompartilhadoCustoCedente;
+                break;
+            case 'EmissaoCompartilhadaCustoCedente':
+                valorPagoParaContratada = valorPagoParaContratada - valorCompartilhadoCusto220;
+                break;
+            default:
+                valorPagoParaContratada += valorEmissaoNotaFiscal;
+                break;
+        }
+
+        alert('Valor pago para contratada: ' + valorPagoParaContratada);
+
+        //Totais pagos e economia
+        const valorTotalPagoComCreditos = entrada.valorCpfl + valorPagoParaCedenteParcial;
+        const valorTotalPagoSemCreditos = entrada.energiaConsumidaValorTusdAtiva + entrada.energiaConsumidaValorTeAtiva + entrada.ipCipEncargos + entrada.energiaConsumidaBandeira;
+        const valorEconomia = valorTotalPagoSemCreditos - valorTotalPagoComCreditos;
+
+        //Valor final pago para o cedente
+        const valorEmissaoNotaFiscalCedente = contrato.notaFiscalTipoEmissao === 'EmissaoCedente' ? (valorEmissaoNotaFiscal * contrato.cedenteValorNegociacao) / 100 : 0;
+        const valorPagoParaCedente = contrato.flagValorContaEnergiaInclusoNoPagamentoAoCedente
+            ? valorPagoParaCedenteParcial + valorEmissaoNotaFiscalCedente + entrada.valorCpfl
+            : valorPagoParaCedenteParcial + valorEmissaoNotaFiscalCedente;
+
+        const valorCreditoNegociado = 0;
+        const valorContratadaSobreCedente = 0;
+        const valorContratadaSobreNotaFiscal = 0;
+        const valorAdicionalContratada = 0;
+
+        return {
+            valorTotalSemDesconto,
+            valorDesconto,
+            valorTotalComDesconto,
+            valorPagoParaCedenteParcial,
+            valorPagoParaContratadaParcial,
+            valorBaseCalculoCedente,
+            valorBaseCalculoNotaFiscal,
+            valorEmissaoNotaFiscal,
+            valorCreditoNegociado,
+            valorContratadaSobreCedente,
+            valorContratadaSobreNotaFiscal,
+            valorAdicionalContratada,
+            valorPagoParaContratada,
+            valorTotalPagoComCreditos,
+            valorTotalPagoSemCreditos,
+            valorEconomia,
+            valorEmissaoNotaFiscalCedente,
+            valorPagoParaCedente
+        };
     }
 
     salvar() {

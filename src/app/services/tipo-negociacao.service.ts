@@ -11,6 +11,10 @@ export class TipoNegociacaoService {
             {
                 id: 'Percentual',
                 descricao: 'Percentual'
+            },
+            {
+                id: 'Kwh',
+                descricao: 'KWh'
             }
         ];        
     }

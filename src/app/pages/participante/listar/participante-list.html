@@ -7,7 +7,7 @@
             <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
         </ng-template>
     </p-toolbar>
-    <p-table [value]="participantes()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+    <p-table #dt [value]="participantes()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
         <ng-template #header>
             <tr>
                 <th scope="col">Documento</th>
@@ -16,6 +16,22 @@
                 <th scope="col">Cedente</th>
                 <th scope="col">Beneficiário</th>
                 <th scope="col" style="width: 8rem"></th>
+            </tr>
+            <tr>
+                <th scope="col">
+                    <p-column-filter type="text" field="documento" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar documento" ariaLabel="Filtrar documento" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="nome" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar nome" ariaLabel="Filtrar nome" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="email" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar email" ariaLabel="Filtrar email" />
+                </th>
+                <th scope="col"></th>
+                <th scope="col"></th>
+                <th scope="col">
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="dt.clear()" pTooltip="Limpar filtros"><i class="pi pi-filter-slash"></i></button>
+                </th>
             </tr>
         </ng-template>
         <ng-template #body let-participante>
