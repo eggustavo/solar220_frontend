@@ -141,6 +141,17 @@
                         <p-datepicker inputId="dataLimitePagamentoContratada" formControlName="dataLimitePagamentoContratada" dateFormat="dd/mm/yy" [showIcon]="true" fluid />
                     </td>
                 </tr>
+                @if (editando()) {
+                    <tr>
+                        <td class="label"><label for="status">Status:</label></td>
+                        <td class="value" colspan="2">
+                            <p-select inputId="status" formControlName="status" [options]="statusMovimento()" optionLabel="descricao" optionValue="nome" placeholder="Selecione o status" appendTo="body" fluid />
+                            @if (form.controls.status.invalid && form.controls.status.touched) {
+                                <small class="text-red-500">Campo obrigatório.</small>
+                            }
+                        </td>
+                    </tr>
+                }
             </tbody>
         </table>
 

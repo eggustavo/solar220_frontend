@@ -7,28 +7,45 @@
             <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
         </ng-template>
     </p-toolbar>
+    <div class="flex flex-wrap items-end gap-4 mt-6 mb-6">
+        <div class="flex flex-col gap-2">
+            <label for="mesReferencia" class="font-medium">Mês/Ano Referência</label>
+            <p-select
+                inputId="mesReferencia"
+                [ngModel]="mesReferenciaSelecionado()"
+                (ngModelChange)="selecionarMesReferencia($event)"
+                [options]="mesesReferencia()"
+                optionLabel="mesAnoReferencia"
+                optionValue="mesAnoReferencia"
+                [filter]="true"
+                filterBy="mesAnoReferencia"
+                placeholder="Selecione"
+                styleClass="w-56"
+            />
+        </div>
+    </div>
     <p-table #dt [value]="movimentos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
         <ng-template #header>
             <tr>
-                <th scope="col" style="width: 40rem">Beneciário</th>
-                <th scope="col" style="width: 8rem">Número UC</th>
-                <th scope="col" style="width: 8rem; text-align: center">Mês/Ano Referência</th>
-                <th scope="col" style="width: 8rem; text-align: center">Faturado?</th>
-                <th scope="col" style="width: 8rem; text-align: center">Integrado?</th>
+                <th scope="col" style="width: 25rem">Beneficiário</th>
+                <th scope="col" style="width: 25rem">Cedente</th>
+                <th scope="col" style="width: 12rem; text-align: center">Status</th>
                 <th scope="col" style="width: 5rem">Ações</th>
             </tr>
             <tr>
                 <th scope="col">
-                    <p-column-filter type="text" field="contrato.beneficiario.nome" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar beneficiário" ariaLabel="Filtrar beneficiário" />
+                    <p-column-filter type="text" field="contrato" display="row" matchMode="beneficiarioNomeOuUc" [showMenu]="false" filterOn="input" placeholder="Filtrar nome ou UC" ariaLabel="Filtrar beneficiário por nome ou UC" />
                 </th>
                 <th scope="col">
-                    <p-column-filter type="text" field="contrato.beneficiarioNumeroUc" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar UC" ariaLabel="Filtrar número UC" />
+                    <p-column-filter type="text" field="contrato" display="row" matchMode="cedenteNomeOuUc" [showMenu]="false" filterOn="input" placeholder="Filtrar nome ou UC" ariaLabel="Filtrar cedente por nome ou UC" />
                 </th>
                 <th scope="col">
-                    <p-column-filter type="text" field="mesAnoReferencia" display="row" matchMode="contains" filterOn="input" placeholder="Filtrar mês/ano" ariaLabel="Filtrar mês/ano referência" />
+                    <p-column-filter field="statusDesc" matchMode="equals" display="row" [showMenu]="false" [showClearButton]="false">
+                        <ng-template #filter let-value let-filter="filterCallback">
+                            <p-select [ngModel]="value" [options]="statusMovimento()" optionLabel="descricao" optionValue="descricao" placeholder="Todos" [showClear]="true" appendTo="body" fluid ariaLabel="Filtrar status" (onChange)="filter($event.value)" />
+                        </ng-template>
+                    </p-column-filter>
                 </th>
-                <th scope="col"></th>
-                <th scope="col"></th>
                 <th scope="col">
                     <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="dt.clear()" pTooltip="Limpar filtros"><i class="pi pi-filter-slash"></i></button>
                 </th>
@@ -36,14 +53,16 @@
         </ng-template>
         <ng-template #body let-movimento>
             <tr>
-                <td>{{ movimento.contrato.beneficiario.nome }}</td>
-                <td>{{ movimento.contrato.beneficiarioNumeroUc }}</td>
-                <td style="text-align: center">{{ movimento.mesAnoReferencia }}</td>
-                <td style="text-align: center">
-                    <p-tag [value]="movimento.flagLiberadoFaturamento ? 'Sim' : 'Não'" [severity]="movimento.flagLiberadoFaturamento ? 'success' : 'secondary'" />
+                <td>
+                    <div>{{ movimento.contrato.beneficiario.nome }}</div>
+                    <div class="text-sm font-bold">UC: {{ movimento.contrato.beneficiarioNumeroUc }}</div>
+                </td>
+                <td>
+                    <div>{{ movimento.contrato.cedente.nome }}</div>
+                    <div class="text-sm font-bold">UC: {{ movimento.contrato.cedenteNumeroUc }}</div>
                 </td>
                 <td style="text-align: center">
-                    <p-tag [value]="movimento.flagIntegradoFinanceiro ? 'Sim' : 'Não'" [severity]="movimento.flagIntegradoFinanceiro ? 'success' : 'secondary'" />
+                    <p-tag [value]="movimento.statusDesc" [severity]="movimento.status === 'NaoConferido' ? 'warn' : 'success'" />
                 </td>
                 <td>
                     <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, movimento, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
@@ -52,7 +71,7 @@
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="6" class="text-center">Nenhum lançamento encontrado.</td>
+                <td colspan="4" class="text-center">Nenhum lançamento encontrado.</td>
             </tr>
         </ng-template>
     </p-table>

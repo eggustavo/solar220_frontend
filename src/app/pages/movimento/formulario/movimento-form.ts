@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ContratoService } from '@/app/services/contrato.service';
-import { debounceTime, merge } from 'rxjs';
+import { debounceTime, forkJoin, merge } from 'rxjs';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputMaskModule } from 'primeng/inputmask';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -19,6 +19,7 @@ import { BaseCalculoService } from '@/app/services/base-calculo.service';
 import { NotaFiscalTipoEmissaoService } from '@/app/services/nota-fiscal-tipo-emissao.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
+import { StatusMovimentoService } from '@/app/services/status-movimento.service';
 import { MessageService } from 'primeng/api';
 import { ContratoCalculo, DadosEntradaCalculo, gerarMemoriaCalculo, ResultadoCalculo, TIPOS_COM_EMISSAO_NOTA_FISCAL } from './movimento-memoria-calculo';
 
@@ -35,6 +36,7 @@ export class MovimentoForm implements OnInit {
     private readonly fb = inject(FormBuilder);
     private readonly contratoService = inject(ContratoService);
     private readonly movimentoService = inject(MovimentoService);
+    private readonly statusMovimentoService = inject(StatusMovimentoService);
     private readonly tipoNegociacaoService = inject(TipoNegociacaoService);
     private readonly statusContratoService = inject(StatusContratoService);
     private readonly bandeiraTipoCobrancaService = inject(BandeiraTipoCobrancaService);
@@ -47,6 +49,7 @@ export class MovimentoForm implements OnInit {
     contratos = signal<any[]>([]);
     tiposNegociacao = signal<any[]>([]);
     statusContrato = signal<any[]>([]);
+    statusMovimento = signal<any[]>([]);
     bandeirasTipoCobranca = signal<any[]>([]);
     basesCalculo = signal<any[]>([]);
     tiposNotaFiscalEmissao = signal<any[]>([]);
@@ -60,6 +63,7 @@ export class MovimentoForm implements OnInit {
 
     form = this.fb.nonNullable.group({
         contratoId: ['', Validators.required],
+        status: this.fb.control<string | null>(null),
         mesAnoReferencia: ['', [Validators.required, Validators.maxLength(7)]],
         dataInicialPeriodo: this.fb.control<Date | null>(null, Validators.required),
         dataFinalPeriodo: this.fb.control<Date | null>(null, Validators.required),
@@ -128,6 +132,7 @@ export class MovimentoForm implements OnInit {
         });
 
         if (this.movimentoId) {
+            this.form.controls.status.addValidators(Validators.required);
             this.carregarMovimento(this.movimentoId);
         }
     }
@@ -135,8 +140,9 @@ export class MovimentoForm implements OnInit {
     private carregarMovimento(id: string) {
         this.carregando.set(true);
 
-        this.movimentoService.obter(id).subscribe({
-            next: (resposta) => {
+        forkJoin([this.movimentoService.obter(id), this.statusMovimentoService.listar()]).subscribe({
+            next: ([resposta, statusMovimento]) => {
+                this.statusMovimento.set(statusMovimento);
                 if (resposta.items) {
                     this.preencherFormulario(resposta.items);
                 }
@@ -149,6 +155,7 @@ export class MovimentoForm implements OnInit {
     preencherFormulario(movimento: any) {
         this.form.patchValue({
             contratoId: movimento.contratoId,
+            status: movimento.status ?? null,
             mesAnoReferencia: movimento.mesAnoReferencia ?? '',
             dataInicialPeriodo: this.paraData(movimento.dataInicialPeriodo),
             dataFinalPeriodo: this.paraData(movimento.dataFinalPeriodo),
@@ -418,6 +425,7 @@ export class MovimentoForm implements OnInit {
     private montarRequestAtualizar() {
         return {
             id: this.movimentoId!,
+            status: this.form.controls.status.value,
             ...this.dadosComuns()
         };
     }

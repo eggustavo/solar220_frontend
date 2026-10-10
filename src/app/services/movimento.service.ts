@@ -10,8 +10,12 @@ export class MovimentoService {
 
     constructor(private readonly http: HttpClient) {}
 
-    listar(): Observable<RespostaApi<any>> {
-        return this.http.get<RespostaApi<any>>(`${this.apiUrl}/listar`);
+    listar(mesAnoReferencia: string): Observable<RespostaApi<any>> {
+        return this.http.get<RespostaApi<any>>(`${this.apiUrl}/listar`, { params: { MesAnoReferencia: mesAnoReferencia } });
+    }
+
+    listarMesesReferencia(): Observable<RespostaApi<{ mesAnoReferencia: string }[]>> {
+        return this.http.get<RespostaApi<{ mesAnoReferencia: string }[]>>(`${this.apiUrl}/listar-meses-referencia`);
     }
 
     obter(id: string): Observable<RespostaApi<any>> {

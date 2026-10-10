@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
 import { MovimentoAnexoService } from '@/app/services/movimento-anexo.service';
-import { ConfirmationService, MenuItem, MessageService } from 'primeng/api';
+import { StatusMovimentoService } from '@/app/services/status-movimento.service';
+import { ConfirmationService, FilterService, MenuItem, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { FileUploadModule, FileUploadHandlerEvent } from 'primeng/fileupload';
 import { MenuModule } from 'primeng/menu';
+import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
@@ -17,7 +20,7 @@ import { TooltipModule } from 'primeng/tooltip';
 @Component({
     selector: 'app-movimento-list',
     standalone: true,
-    imports: [CommonModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule, DialogModule, FileUploadModule],
+    imports: [CommonModule, FormsModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule, DialogModule, FileUploadModule, SelectModule],
     templateUrl: './movimento-list.html',
     styleUrl: './movimento-list.scss',
     changeDetection: ChangeDetectionStrategy.Eager,
@@ -25,6 +28,9 @@ import { TooltipModule } from 'primeng/tooltip';
 })
 export class MovimentoList implements OnInit {
     movimentos = signal<any[]>([]);
+    statusMovimento = signal<any[]>([]);
+    mesesReferencia = signal<{ mesAnoReferencia: string }[]>([]);
+    mesReferenciaSelecionado = signal<string | null>(null);
 
     loading = signal<boolean>(false);
 
@@ -39,19 +45,51 @@ export class MovimentoList implements OnInit {
     constructor(
         private readonly movimentoService: MovimentoService,
         private readonly movimentoAnexoService: MovimentoAnexoService,
+        private readonly statusMovimentoService: StatusMovimentoService,
         private readonly confirmationService: ConfirmationService,
         private readonly messageService: MessageService,
+        private readonly filterService: FilterService,
         private readonly router: Router
     ) {}
 
     ngOnInit() {
+        this.filterService.register('beneficiarioNomeOuUc', (contrato: any, filtro: string) => this.nomeOuUcContem(contrato?.beneficiario?.nome, contrato?.beneficiarioNumeroUc, filtro));
+        this.filterService.register('cedenteNomeOuUc', (contrato: any, filtro: string) => this.nomeOuUcContem(contrato?.cedente?.nome, contrato?.cedenteNumeroUc, filtro));
+
+        this.statusMovimentoService.listar().subscribe((status) => this.statusMovimento.set(status));
+        this.movimentoService.listarMesesReferencia().subscribe((resposta) => {
+            const meses = resposta.items ?? [];
+            this.mesesReferencia.set(meses);
+            this.selecionarMesReferencia(meses[0]?.mesAnoReferencia ?? null);
+        });
+    }
+
+    private nomeOuUcContem(nome: string | null | undefined, uc: string | number | null | undefined, filtro: string): boolean {
+        if (!filtro?.trim()) {
+            return true;
+        }
+
+        const termo = filtro.trim().toLowerCase();
+
+        return (nome ?? '').toLowerCase().includes(termo) || String(uc ?? '').toLowerCase().includes(termo);
+    }
+
+    selecionarMesReferencia(mesAnoReferencia: string | null) {
+        this.mesReferenciaSelecionado.set(mesAnoReferencia);
         this.carregarMovimentos();
     }
 
     carregarMovimentos() {
+        const mesAnoReferencia = this.mesReferenciaSelecionado();
+
+        if (!mesAnoReferencia) {
+            this.movimentos.set([]);
+            return;
+        }
+
         this.loading.set(true);
 
-        this.movimentoService.listar().subscribe({
+        this.movimentoService.listar(mesAnoReferencia).subscribe({
             next: (resposta) => {
                 this.movimentos.set(resposta.items ?? []);
                 this.loading.set(false);
