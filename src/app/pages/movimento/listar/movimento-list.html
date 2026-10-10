@@ -25,6 +25,7 @@
         </div>
         @if (movimentosSelecionados().length > 0) {
             <button pButton severity="secondary" (click)="abrirAlterarStatus()"><i class="pi pi-sync"></i>Alterar Status ({{ movimentosSelecionados().length }})</button>
+            <button pButton severity="secondary" (click)="enviarSelecionadosPorEmail()" [disabled]="solicitandoEmail()"><i class="pi pi-envelope"></i>Enviar por E-mail ({{ movimentosSelecionados().length }})</button>
         }
     </div>
     <p-table #dt [value]="movimentos()" [selection]="movimentosSelecionados()" (selectionChange)="movimentosSelecionados.set($event)" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">

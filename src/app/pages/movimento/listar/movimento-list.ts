@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
 import { MovimentoAnexoService } from '@/app/services/movimento-anexo.service';
+import { MovimentoEmailService } from '@/app/services/movimento-email.service';
 import { StatusMovimentoService } from '@/app/services/status-movimento.service';
 import { ConfirmationService, FilterService, MenuItem, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -37,6 +38,8 @@ export class MovimentoList implements OnInit {
     novoStatus = signal<string | null>(null);
     alterandoStatus = signal<boolean>(false);
 
+    solicitandoEmail = signal<boolean>(false);
+
     loading = signal<boolean>(false);
 
     menuItems: MenuItem[] = [];
@@ -50,6 +53,7 @@ export class MovimentoList implements OnInit {
     constructor(
         private readonly movimentoService: MovimentoService,
         private readonly movimentoAnexoService: MovimentoAnexoService,
+        private readonly movimentoEmailService: MovimentoEmailService,
         private readonly statusMovimentoService: StatusMovimentoService,
         private readonly confirmationService: ConfirmationService,
         private readonly messageService: MessageService,
@@ -226,7 +230,44 @@ export class MovimentoList implements OnInit {
         });
     }
 
-    enviarPorEmail(movimento: any) {}
+    enviarPorEmail(movimento: any) {
+        this.confirmarEnvioPorEmail([movimento]);
+    }
+
+    enviarSelecionadosPorEmail() {
+        this.confirmarEnvioPorEmail(this.movimentosSelecionados());
+    }
+
+    private confirmarEnvioPorEmail(movimentos: any[]) {
+        if (movimentos.length === 0) {
+            return;
+        }
+
+        const mensagem =
+            movimentos.length === 1
+                ? `Deseja enviar o demonstrativo do movimento "${movimentos[0].contrato.beneficiario.nome} - ${movimentos[0].mesAnoReferencia}" por e-mail ao cedente?`
+                : `Deseja enviar o demonstrativo de ${movimentos.length} movimentos por e-mail aos respectivos cedentes?`;
+
+        this.confirmationService.confirm({
+            header: 'Enviar por E-mail',
+            message: `${mensagem}<br/><br/>O envio será processado em segundo plano em até 5 minutos.`,
+            icon: 'pi pi-envelope',
+            acceptButtonProps: { label: 'Enviar' },
+            rejectButtonProps: { severity: 'secondary', outlined: true, label: 'Cancelar' },
+            accept: () => {
+                this.solicitandoEmail.set(true);
+
+                this.movimentoEmailService.solicitar(movimentos.map((movimento) => movimento.id)).subscribe({
+                    next: (resposta) => {
+                        this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Envio de e-mail solicitado com sucesso.', life: 4000 });
+                        this.solicitandoEmail.set(false);
+                        this.movimentosSelecionados.set([]);
+                    },
+                    error: () => this.solicitandoEmail.set(false)
+                });
+            }
+        });
+    }
 
     abrirAlterarStatus() {
         this.novoStatus.set(null);
