@@ -1,42 +1,48 @@
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-    margin: 1.5rem 0 1rem 0;
-    font-family: inherit;
-    font-weight: 700;
-    line-height: 1.5;
-    color: var(--text-color);
+// Camada própria entre "base" (preflight do Tailwind) e "utilities": os estilos de títulos sobrescrevem o preflight,
+// mas utilitários do Tailwind (ex.: m-0, mb-4) continuam sobrescrevendo as margens
+@layer theme, base, typography, components, utilities;
 
-    &:first-child {
-        margin-top: 0;
+@layer typography {
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        margin: 1.5rem 0 1rem 0;
+        font-family: inherit;
+        font-weight: 700;
+        line-height: 1.5;
+        color: var(--text-color);
+
+        &:first-child {
+            margin-top: 0;
+        }
     }
-}
 
-h1 {
-    font-size: 2.5rem;
-}
+    h1 {
+        font-size: 2.5rem;
+    }
 
-h2 {
-    font-size: 2rem;
-}
+    h2 {
+        font-size: 2rem;
+    }
 
-h3 {
-    font-size: 1.75rem;
-}
+    h3 {
+        font-size: 1.75rem;
+    }
 
-h4 {
-    font-size: 1.5rem;
-}
+    h4 {
+        font-size: 1.5rem;
+    }
 
-h5 {
-    font-size: 1.25rem;
-}
+    h5 {
+        font-size: 1.25rem;
+    }
 
-h6 {
-    font-size: 1rem;
+    h6 {
+        font-size: 1rem;
+    }
 }
 
 mark {

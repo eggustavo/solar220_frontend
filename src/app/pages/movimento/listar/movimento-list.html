@@ -23,16 +23,23 @@
                 styleClass="w-56"
             />
         </div>
+        @if (movimentosSelecionados().length > 0) {
+            <button pButton severity="secondary" (click)="abrirAlterarStatus()"><i class="pi pi-sync"></i>Alterar Status ({{ movimentosSelecionados().length }})</button>
+        }
     </div>
-    <p-table #dt [value]="movimentos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+    <p-table #dt [value]="movimentos()" [selection]="movimentosSelecionados()" (selectionChange)="movimentosSelecionados.set($event)" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
         <ng-template #header>
             <tr>
+                <th scope="col" style="width: 3rem">
+                    <p-table-header-checkbox />
+                </th>
                 <th scope="col" style="width: 25rem">Beneficiário</th>
                 <th scope="col" style="width: 25rem">Cedente</th>
                 <th scope="col" style="width: 12rem; text-align: center">Status</th>
                 <th scope="col" style="width: 5rem">Ações</th>
             </tr>
             <tr>
+                <th scope="col"></th>
                 <th scope="col">
                     <p-column-filter type="text" field="contrato" display="row" matchMode="beneficiarioNomeOuUc" [showMenu]="false" filterOn="input" placeholder="Filtrar nome ou UC" ariaLabel="Filtrar beneficiário por nome ou UC" />
                 </th>
@@ -54,6 +61,9 @@
         <ng-template #body let-movimento>
             <tr>
                 <td>
+                    <p-table-checkbox [value]="movimento" />
+                </td>
+                <td>
                     <div>{{ movimento.contrato.beneficiario.nome }}</div>
                     <div class="text-sm font-bold">UC: {{ movimento.contrato.beneficiarioNumeroUc }}</div>
                 </td>
@@ -62,7 +72,7 @@
                     <div class="text-sm font-bold">UC: {{ movimento.contrato.cedenteNumeroUc }}</div>
                 </td>
                 <td style="text-align: center">
-                    <p-tag [value]="movimento.statusDesc" [severity]="movimento.status === 'NaoConferido' ? 'warn' : 'success'" />
+                    <p-tag [value]="movimento.statusDesc" severity="info" [class.status-nao-conferido]="movimento.status === 'NaoConferido'" [class.status-conferido]="movimento.status === 'Conferido'" />
                 </td>
                 <td>
                     <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, movimento, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
@@ -71,7 +81,7 @@
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="4" class="text-center">Nenhum lançamento encontrado.</td>
+                <td colspan="5" class="text-center">Nenhum lançamento encontrado.</td>
             </tr>
         </ng-template>
     </p-table>
@@ -79,6 +89,18 @@
 </div>
 
 <p-confirmdialog [style]="{ width: '450px' }" />
+
+<p-dialog header="Alterar Status" [visible]="alterarStatusVisivel()" (visibleChange)="alterarStatusVisivel.set($event)" [modal]="true" [style]="{ width: '400px' }" [breakpoints]="{ '960px': '90vw' }">
+    <div class="flex flex-col gap-2">
+        <p class="m-0 mb-2">{{ movimentosSelecionados().length }} lançamento(s) selecionado(s).</p>
+        <label for="novoStatus" class="font-medium">Novo status</label>
+        <p-select inputId="novoStatus" [ngModel]="novoStatus()" (ngModelChange)="novoStatus.set($event)" [options]="statusMovimento()" optionLabel="descricao" optionValue="nome" placeholder="Selecione o status" appendTo="body" fluid />
+    </div>
+    <ng-template #footer>
+        <button pButton severity="secondary" [outlined]="true" (click)="alterarStatusVisivel.set(false)" [disabled]="alterandoStatus()">Cancelar</button>
+        <button pButton (click)="confirmarAlterarStatus()" [disabled]="!novoStatus() || alterandoStatus()" [loading]="alterandoStatus()">Salvar</button>
+    </ng-template>
+</p-dialog>
 
 <p-dialog header="Anexar Documentos" styleClass="anexo-dialog" [visible]="anexosVisivel()" (visibleChange)="anexosVisivel.set($event)" [modal]="true" [style]="{ width: '40vw' }" [breakpoints]="{ '960px': '90vw' }">
     <p-fileupload

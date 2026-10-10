@@ -11,3 +11,13 @@
 :host ::ng-deep .anexo-dialog .p-dialog-content {
     padding: 0;
 }
+
+.status-nao-conferido {
+    background: var(--p-red-500);
+    color: #fff;
+}
+
+.status-conferido {
+    background: var(--p-green-500);
+    color: #000;
+}

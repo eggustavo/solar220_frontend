@@ -30,6 +30,10 @@ export class MovimentoService {
         return this.http.put<RespostaApi<any>>(`${this.apiUrl}/atualizar`, request);
     }
 
+    atualizarStatus(request: { ids: string[]; status: string }): Observable<RespostaApi<any>> {
+        return this.http.put<RespostaApi<any>>(`${this.apiUrl}/atualizar-status`, request);
+    }
+
     excluir(id: string): Observable<RespostaApi<any>> {
         return this.http.delete<RespostaApi<any>>(`${this.apiUrl}/excluir/${id}`);
     }

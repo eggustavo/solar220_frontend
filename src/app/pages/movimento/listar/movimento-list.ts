@@ -31,6 +31,11 @@ export class MovimentoList implements OnInit {
     statusMovimento = signal<any[]>([]);
     mesesReferencia = signal<{ mesAnoReferencia: string }[]>([]);
     mesReferenciaSelecionado = signal<string | null>(null);
+    movimentosSelecionados = signal<any[]>([]);
+
+    alterarStatusVisivel = signal<boolean>(false);
+    novoStatus = signal<string | null>(null);
+    alterandoStatus = signal<boolean>(false);
 
     loading = signal<boolean>(false);
 
@@ -88,6 +93,7 @@ export class MovimentoList implements OnInit {
         }
 
         this.loading.set(true);
+        this.movimentosSelecionados.set([]);
 
         this.movimentoService.listar(mesAnoReferencia).subscribe({
             next: (resposta) => {
@@ -221,6 +227,35 @@ export class MovimentoList implements OnInit {
     }
 
     enviarPorEmail(movimento: any) {}
+
+    abrirAlterarStatus() {
+        this.novoStatus.set(null);
+        this.alterarStatusVisivel.set(true);
+    }
+
+    confirmarAlterarStatus() {
+        const status = this.novoStatus();
+        const selecionados = this.movimentosSelecionados();
+
+        if (!status || selecionados.length === 0) {
+            return;
+        }
+
+        this.alterandoStatus.set(true);
+
+        this.movimentoService.atualizarStatus({ ids: selecionados.map((movimento) => movimento.id), status }).subscribe({
+            next: (resposta) => {
+                this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? `Status alterado em ${selecionados.length} lançamento(s).`, life: 3000 });
+                this.alterandoStatus.set(false);
+                this.alterarStatusVisivel.set(false);
+                this.carregarMovimentos();
+            },
+            error: () => {
+                this.alterandoStatus.set(false);
+                this.carregarMovimentos();
+            }
+        });
+    }
 
     excluir(movimento: any) {
         this.confirmationService.confirm({
