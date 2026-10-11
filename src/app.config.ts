@@ -3,6 +3,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 import localePtBr from '@angular/common/locales/pt';
 import { ApplicationConfig, LOCALE_ID, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withEnabledBlockingInitialNavigation, withInMemoryScrolling } from '@angular/router';
+import { definePreset } from '@primeuix/themes';
 import Aura from '@primeuix/themes/aura';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
@@ -12,6 +13,25 @@ import { errorInterceptor } from './app/interceptors/error.interceptor';
 import { PRIMENG_PT_BR } from './app/locale/primeng-pt-br';
 
 registerLocaleData(localePtBr, 'pt-BR');
+
+// Cor primária padrão: yellow (a mesma definida em LayoutService.layoutConfig.primary, evitando o 'flash' da cor padrão do Aura)
+const Solar220Preset = definePreset(Aura, {
+    semantic: {
+        primary: {
+            50: '{yellow.50}',
+            100: '{yellow.100}',
+            200: '{yellow.200}',
+            300: '{yellow.300}',
+            400: '{yellow.400}',
+            500: '{yellow.500}',
+            600: '{yellow.600}',
+            700: '{yellow.700}',
+            800: '{yellow.800}',
+            900: '{yellow.900}',
+            950: '{yellow.950}'
+        }
+    }
+});
 
 export const appConfig: ApplicationConfig = {
     providers: [
@@ -23,7 +43,7 @@ export const appConfig: ApplicationConfig = {
             {
                 theme:
                 {
-                    preset: Aura,
+                    preset: Solar220Preset,
                     options:
                     {
                         darkModeSelector: '.app-dark'
