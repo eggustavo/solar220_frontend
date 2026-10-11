@@ -1,8 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
+import { TableModule } from 'primeng/table';
+import { TagModule } from 'primeng/tag';
+import { TooltipModule } from 'primeng/tooltip';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { InputTextModule } from 'primeng/inputtext';
@@ -13,14 +18,15 @@ import { UnidadeFederativaService } from '@/app/services/unidade-federativa.serv
 import { TipoChavePixService } from '@/app/services/tipo-chave-pix.service';
 import { ParticipanteService } from '@/app/services/participante.service';
 import { CepService } from '@/app/services/cep.service';
+import { ParticipanteUsuarioService } from '@/app/services/participante-usuario.service';
 
 @Component({
     selector: 'app-participante-form',
     standalone: true,
-    imports: [CommonModule, ReactiveFormsModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, ToggleSwitchModule, MessageModule],
+    imports: [CommonModule, ReactiveFormsModule, FormsModule, ButtonModule, InputTextModule, SelectModule, DatePickerModule, ToggleSwitchModule, MessageModule, TableModule, TagModule, TooltipModule, DialogModule, ConfirmDialogModule],
     templateUrl: './participante-form.html',
     changeDetection: ChangeDetectionStrategy.Eager,
-    providers: [UnidadeFederativaService, TipoChavePixService]
+    providers: [UnidadeFederativaService, TipoChavePixService, ConfirmationService]
 })
 export class ParticipanteForm implements OnInit {
     editando = signal<boolean>(false);
@@ -28,6 +34,16 @@ export class ParticipanteForm implements OnInit {
     carregando = signal<boolean>(false);
     unidadesFederativas = signal<any[]>([]);
     tiposChavePix = signal<any[]>([]);
+
+    // Usuários de acesso vinculados ao participante (ParticipanteUsuario)
+    usuarios = signal<any[]>([]);
+    usuariosCarregando = signal<boolean>(false);
+    usuariosDisponiveis = signal<any[]>([]);
+    novoUsuarioVisivel = signal<boolean>(false);
+    vincularUsuarioVisivel = signal<boolean>(false);
+    salvandoUsuario = signal<boolean>(false);
+    usuarioSelecionadoId: string | null = null;
+    novoUsuario = { nome: '', email: '', login: '' };
 
     private participanteId: string | null = null;
 
@@ -61,6 +77,8 @@ export class ParticipanteForm implements OnInit {
         private readonly participanteService: ParticipanteService,
         private readonly cepService: CepService,
         private readonly messageService: MessageService,
+        private readonly participanteUsuarioService: ParticipanteUsuarioService,
+        private readonly confirmationService: ConfirmationService,
         private readonly router: Router,
         private readonly route: ActivatedRoute
     ) {}
@@ -75,6 +93,7 @@ export class ParticipanteForm implements OnInit {
 
         if (this.participanteId) {
             this.carregarParticipante(this.participanteId);
+            this.carregarUsuarios();
         } else {
             this.editando.set(false);
         }
@@ -141,6 +160,105 @@ export class ParticipanteForm implements OnInit {
 
     cancelar() {
         this.voltarParaListagem();
+    }
+
+    // ---------- Usuários de acesso ----------
+
+    carregarUsuarios() {
+        if (!this.participanteId) {
+            return;
+        }
+
+        this.usuariosCarregando.set(true);
+
+        this.participanteUsuarioService.listar(this.participanteId).subscribe({
+            next: (resposta) => {
+                this.usuarios.set(resposta.items ?? []);
+                this.usuariosCarregando.set(false);
+            },
+            error: () => this.usuariosCarregando.set(false)
+        });
+    }
+
+    abrirNovoUsuario() {
+        this.novoUsuario = { nome: '', email: '', login: '' };
+        this.novoUsuarioVisivel.set(true);
+    }
+
+    novoUsuarioValido(): boolean {
+        const { nome, email, login } = this.novoUsuario;
+        return !!nome.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && !!login.trim() && login.trim().length <= 20;
+    }
+
+    salvarNovoUsuario() {
+        if (!this.participanteId || !this.novoUsuarioValido()) {
+            return;
+        }
+
+        this.salvandoUsuario.set(true);
+
+        this.participanteUsuarioService
+            .adicionar({ participanteId: this.participanteId, nome: this.novoUsuario.nome.trim(), email: this.novoUsuario.email.trim(), login: this.novoUsuario.login.trim() })
+            .subscribe({
+                next: (resposta) => {
+                    this.salvandoUsuario.set(false);
+                    this.novoUsuarioVisivel.set(false);
+                    this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Usuário cadastrado com sucesso.', life: 4000 });
+                    this.carregarUsuarios();
+                },
+                error: () => this.salvandoUsuario.set(false)
+            });
+    }
+
+    abrirVincularUsuario() {
+        if (!this.participanteId) {
+            return;
+        }
+
+        this.usuarioSelecionadoId = null;
+        this.usuariosDisponiveis.set([]);
+        this.vincularUsuarioVisivel.set(true);
+
+        this.participanteUsuarioService.listarDisponiveis(this.participanteId).subscribe({
+            next: (resposta) => this.usuariosDisponiveis.set(resposta.items ?? [])
+        });
+    }
+
+    salvarVinculo() {
+        if (!this.participanteId || !this.usuarioSelecionadoId) {
+            return;
+        }
+
+        this.salvandoUsuario.set(true);
+
+        this.participanteUsuarioService.vincular({ participanteId: this.participanteId, usuarioId: this.usuarioSelecionadoId }).subscribe({
+            next: (resposta) => {
+                this.salvandoUsuario.set(false);
+                this.vincularUsuarioVisivel.set(false);
+                this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Usuário vinculado com sucesso.', life: 3000 });
+                this.carregarUsuarios();
+            },
+            error: () => this.salvandoUsuario.set(false)
+        });
+    }
+
+    desvincularUsuario(vinculo: any) {
+        this.confirmationService.confirm({
+            header: 'Remover usuário',
+            message: `Deseja remover o acesso de "${vinculo.nome}" a este participante?<br/><br/>O usuário continuará cadastrado, mas deixará de ver os lançamentos deste participante.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { severity: 'danger', label: 'Remover' },
+            rejectButtonProps: { severity: 'secondary', outlined: true, label: 'Cancelar' },
+            accept: () => {
+                this.participanteUsuarioService.excluir(vinculo.id).subscribe({
+                    next: (resposta) => {
+                        this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Usuário desvinculado com sucesso.', life: 3000 });
+                        this.carregarUsuarios();
+                    },
+                    error: () => {}
+                });
+            }
+        });
     }
 
     buscarEnderecoPorCep() {

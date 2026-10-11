@@ -1,0 +1,157 @@
+<div class="card">
+    <p-toolbar styleClass="mb-4">
+        <ng-template #start>
+            <h5 class="m-0">Meus Lançamentos</h5>
+        </ng-template>
+    </p-toolbar>
+    <div class="flex flex-wrap items-end gap-4 mt-6 mb-6">
+        <div class="flex flex-col gap-2">
+            <label for="mesReferencia" class="font-medium">Mês/Ano Referência</label>
+            <p-select
+                inputId="mesReferencia"
+                [ngModel]="mesReferenciaSelecionado()"
+                (ngModelChange)="selecionarMesReferencia($event)"
+                [options]="mesesReferencia()"
+                optionLabel="mesAnoReferencia"
+                optionValue="mesAnoReferencia"
+                [filter]="true"
+                filterBy="mesAnoReferencia"
+                placeholder="Selecione"
+                styleClass="w-56"
+            />
+        </div>
+        <button pButton severity="secondary" [outlined]="true" [iconOnly]="true" (click)="carregarMovimentos()" [disabled]="loading()" pTooltip="Atualizar lista" ariaLabel="Atualizar lista"><i class="pi pi-refresh"></i></button>
+    </div>
+    <p-table #dt [value]="movimentos()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+        <ng-template #header>
+            <tr>
+                <th scope="col" style="width: 25rem">Beneficiário</th>
+                <th scope="col" style="width: 25rem">Cedente</th>
+                <th scope="col" style="width: 12rem; text-align: center">Status</th>
+                <th scope="col" style="width: 13rem; text-align: center">E-mail</th>
+                <th scope="col" style="width: 5rem">Ações</th>
+            </tr>
+            <tr>
+                <th scope="col">
+                    <p-column-filter type="text" field="contrato" display="row" matchMode="beneficiarioNomeOuUc" [showMenu]="false" filterOn="input" placeholder="Filtrar nome ou UC" ariaLabel="Filtrar beneficiário por nome ou UC" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="contrato" display="row" matchMode="cedenteNomeOuUc" [showMenu]="false" filterOn="input" placeholder="Filtrar nome ou UC" ariaLabel="Filtrar cedente por nome ou UC" />
+                </th>
+                <th scope="col">
+                    <p-column-filter field="statusDesc" matchMode="equals" display="row" [showMenu]="false" [showClearButton]="false">
+                        <ng-template #filter let-value let-filter="filterCallback">
+                            <p-select [ngModel]="value" [options]="statusMovimento()" optionLabel="descricao" optionValue="descricao" placeholder="Todos" [showClear]="true" appendTo="body" fluid ariaLabel="Filtrar status" (onChange)="filter($event.value)" />
+                        </ng-template>
+                    </p-column-filter>
+                </th>
+                <th scope="col"></th>
+                <th scope="col">
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="dt.clear()" pTooltip="Limpar filtros"><i class="pi pi-filter-slash"></i></button>
+                </th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-movimento>
+            <tr>
+                <td>
+                    <div>{{ movimento.contrato.beneficiario.nome }}</div>
+                    <div class="text-sm font-bold">UC: {{ movimento.contrato.beneficiarioNumeroUc }}</div>
+                </td>
+                <td>
+                    <div>{{ movimento.contrato.cedente.nome }}</div>
+                    <div class="text-sm font-bold">UC: {{ movimento.contrato.cedenteNumeroUc }}</div>
+                </td>
+                <td style="text-align: center">
+                    <p-tag [value]="movimento.statusDesc" [class.status-nao-conferido]="movimento.status === 'NaoConferido'" [class.status-conferido]="movimento.status === 'Conferido'" />
+                </td>
+                <td style="text-align: center">
+                    @if (movimento.ultimoEmail; as email) {
+                        <button type="button" [class]="'email-status email-status--' + email.status" (click)="abrirDetalheEmail($event, email, detalheEmail)" pTooltip="Ver detalhes do envio" tooltipPosition="top">
+                            <span class="email-status__badge">
+                                <i [class]="'pi ' + iconeStatusEmail(email.status)"></i>
+                                {{ email.statusDesc }}
+                            </span>
+                            <span class="email-status__data">
+                                @switch (email.status) {
+                                    @case ('Pendente') {
+                                        @if (email.quantidadeTentativas > 0) {
+                                            Tentativa {{ email.quantidadeTentativas }}/3 falhou
+                                        } @else {
+                                            Solicitado {{ email.data | date: 'dd/MM HH:mm' }}
+                                        }
+                                    }
+                                    @default {
+                                        @if (email.dataUltimaTentativa) {
+                                            {{ email.dataUltimaTentativa | date: 'dd/MM/yyyy HH:mm' }}
+                                        } @else {
+                                            Cancelado
+                                        }
+                                    }
+                                }
+                            </span>
+                        </button>
+                    } @else {
+                        <span class="text-surface-400 text-sm">Não enviado</span>
+                    }
+                </td>
+                <td>
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, movimento, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="5" class="text-center">Nenhum lançamento encontrado.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <p-menu #acoesMenu [popup]="true" [model]="menuItems" appendTo="body" />
+    <p-popover #detalheEmail appendTo="body">
+        @if (emailSelecionado(); as email) {
+            <div class="email-detalhe">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                    <span class="font-semibold">Envio de e-mail</span>
+                    <span [class]="'email-status__badge email-status--' + email.status"><i [class]="'pi ' + iconeStatusEmail(email.status)"></i>{{ email.statusDesc }}</span>
+                </div>
+                <dl class="email-detalhe__lista">
+                    <dt>Solicitado em</dt>
+                    <dd>{{ email.data | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+                    <dt>Última tentativa</dt>
+                    <dd>{{ email.dataUltimaTentativa ? (email.dataUltimaTentativa | date: 'dd/MM/yyyy HH:mm:ss') : '—' }}</dd>
+                    <dt>Tentativas</dt>
+                    <dd>{{ email.quantidadeTentativas }} de 3</dd>
+                </dl>
+                @if (email.mensagem) {
+                    <div [class]="'email-detalhe__mensagem email-detalhe__mensagem--' + email.status">{{ email.mensagem }}</div>
+                } @else if (email.status === 'Pendente') {
+                    <div class="email-detalhe__mensagem email-detalhe__mensagem--Pendente">Aguardando processamento. O envio é realizado em até 5 minutos.</div>
+                }
+            </div>
+        }
+    </p-popover>
+</div>
+
+<p-dialog header="Documentos Anexados" styleClass="anexo-dialog" [visible]="anexosVisivel()" (visibleChange)="anexosVisivel.set($event)" [modal]="true" [style]="{ width: '40vw' }" [breakpoints]="{ '960px': '90vw' }">
+    <div class="px-4 pb-4 pt-3">
+        @if (anexosCarregando()) {
+            <p class="text-center">Carregando...</p>
+        } @else if (anexos().length === 0) {
+            <p class="text-center">Nenhum documento anexado.</p>
+        } @else {
+            <ul class="p-0 m-0 list-none">
+                @for (anexo of anexos(); track anexo.id) {
+                    <li class="flex items-center justify-between gap-2 py-2 border-b border-surface-200">
+                        <div class="flex items-center gap-2 overflow-hidden">
+                            <i [class]="anexo.nomeOriginal.toLowerCase().endsWith('.pdf') ? 'pi pi-file-pdf' : 'pi pi-image'"></i>
+                            <span class="whitespace-nowrap overflow-hidden text-ellipsis">{{ anexo.nomeOriginal }}</span>
+                            <span class="text-surface-500 text-sm">({{ formatarTamanho(anexo.tamanho) }})</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button pButton type="button" [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="baixarAnexo(anexo)" pTooltip="Baixar / Visualizar anexo"><i class="pi pi-download"></i></button>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+</p-dialog>

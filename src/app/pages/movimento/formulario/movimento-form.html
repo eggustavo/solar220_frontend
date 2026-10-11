@@ -1,7 +1,7 @@
 <div class="card">
-    <h5 class="m-0 mb-4">{{ editando() ? 'Editar Lançamento' : 'Novo Lançamento' }}</h5>
+    <h5 class="m-0 mb-4">{{ somenteLeitura() ? 'Visualizar Lançamento' : editando() ? 'Editar Lançamento' : 'Novo Lançamento' }}</h5>
 
-    <form [formGroup]="form" (ngSubmit)="salvar()">
+    <form [formGroup]="form" (ngSubmit)="!somenteLeitura() && salvar()">
         <table class="report-table">
             <colgroup>
                 <col style="width: 40%" />
@@ -146,6 +146,9 @@
                         <td class="label"><label for="status">Status:</label></td>
                         <td class="value" colspan="2">
                             <p-select inputId="status" formControlName="status" [options]="statusMovimento()" optionLabel="descricao" optionValue="nome" placeholder="Selecione o status" appendTo="body" fluid />
+                            @if (emailEnviado() && !somenteLeitura()) {
+                                <small class="text-surface-500"><i class="pi pi-lock text-xs"></i> E-mail já enviado. O status só pode ser alterado pela opção "Resetar Fluxo" na listagem.</small>
+                            }
                             @if (form.controls.status.invalid && form.controls.status.touched) {
                                 <small class="text-red-500">Campo obrigatório.</small>
                             }
@@ -382,16 +385,20 @@
             </tbody>
         </table>
         <div class="form-actions flex justify-end gap-2 mt-3">
-            <button pButton type="button" severity="secondary" outlined [disabled]="!memoriaCalculoTexto()" (click)="abrirMemoriaCalculo()"><i class="pi pi-list"></i>Memória de cálculo</button>
-            <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
-            <button pButton type="submit" [disabled]="salvando()">
-                @if (salvando()) {
-                    <i class="pi pi-spin pi-spinner"></i>
-                } @else {
-                    <i class="pi pi-check"></i>
-                }
-                Salvar
-            </button>
+            @if (somenteLeitura()) {
+                <button pButton type="button" severity="secondary" (click)="voltar()"><i class="pi pi-arrow-left"></i>Voltar</button>
+            } @else {
+                <button pButton type="button" severity="secondary" outlined [disabled]="!memoriaCalculoTexto()" (click)="abrirMemoriaCalculo()"><i class="pi pi-list"></i>Memória de cálculo</button>
+                <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
+                <button pButton type="submit" [disabled]="salvando()">
+                    @if (salvando()) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                    } @else {
+                        <i class="pi pi-check"></i>
+                    }
+                    Salvar
+                </button>
+            }
         </div>
     </form>
 

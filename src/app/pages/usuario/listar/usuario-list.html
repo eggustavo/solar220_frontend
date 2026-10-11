@@ -1,0 +1,79 @@
+<div class="card">
+    <p-toolbar styleClass="mb-4">
+        <ng-template #start>
+            <h5 class="m-0">Usuários</h5>
+        </ng-template>
+        <ng-template #end>
+            <button pButton (click)="adicionar()"><i class="pi pi-plus"></i>Adicionar</button>
+        </ng-template>
+    </p-toolbar>
+    <p-table #dt [value]="usuarios()" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
+        <ng-template #header>
+            <tr>
+                <th scope="col">Nome</th>
+                <th scope="col">Login</th>
+                <th scope="col">E-mail</th>
+                <th scope="col" style="width: 11rem; text-align: center">Perfil</th>
+                <th scope="col" style="width: 12rem; text-align: center">Situação</th>
+                <th scope="col" style="width: 5rem">Ações</th>
+            </tr>
+            <tr>
+                <th scope="col">
+                    <p-column-filter type="text" field="nome" display="row" matchMode="contains" filterOn="input" [showMenu]="false" placeholder="Filtrar nome" ariaLabel="Filtrar nome" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="login" display="row" matchMode="contains" filterOn="input" [showMenu]="false" placeholder="Filtrar login" ariaLabel="Filtrar login" />
+                </th>
+                <th scope="col">
+                    <p-column-filter type="text" field="email" display="row" matchMode="contains" filterOn="input" [showMenu]="false" placeholder="Filtrar e-mail" ariaLabel="Filtrar e-mail" />
+                </th>
+                <th scope="col">
+                    <p-column-filter field="tipo" matchMode="equals" display="row" [showMenu]="false" [showClearButton]="false">
+                        <ng-template #filter let-value let-filter="filterCallback">
+                            <p-select [ngModel]="value" [options]="tiposUsuario()" optionLabel="descricao" optionValue="id" placeholder="Todos" [showClear]="true" appendTo="body" fluid ariaLabel="Filtrar perfil" (onChange)="filter($event.value)" />
+                        </ng-template>
+                    </p-column-filter>
+                </th>
+                <th scope="col"></th>
+                <th scope="col">
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="dt.clear()" pTooltip="Limpar filtros"><i class="pi pi-filter-slash"></i></button>
+                </th>
+            </tr>
+        </ng-template>
+        <ng-template #body let-usuario>
+            <tr>
+                <td>
+                    {{ usuario.nome }}
+                    @if (ehUsuarioLogado(usuario)) {
+                        <span class="text-xs text-muted-color ml-1">(você)</span>
+                    }
+                </td>
+                <td>{{ usuario.login }}</td>
+                <td>{{ usuario.email }}</td>
+                <td style="text-align: center">
+                    <p-tag [value]="usuario.tipoDesc" [severity]="severidadeTipo(usuario.tipo)" />
+                </td>
+                <td style="text-align: center">
+                    @if (usuario.status !== 'Ativo') {
+                        <p-tag [value]="usuario.statusDesc" severity="secondary" />
+                    } @else if (usuario.flagTrocarSenha) {
+                        <p-tag value="Aguardando 1º acesso" severity="warn" pTooltip="O usuário ainda está com a senha provisória enviada por e-mail" />
+                    } @else {
+                        <p-tag value="Ativo" severity="success" />
+                    }
+                </td>
+                <td>
+                    <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, usuario, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+            <tr>
+                <td colspan="6" class="text-center">Nenhum usuário encontrado.</td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <p-menu #acoesMenu [popup]="true" [model]="menuItems" appendTo="body" />
+</div>
+
+<p-confirmdialog [style]="{ width: '450px' }" />

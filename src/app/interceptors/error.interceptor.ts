@@ -15,6 +15,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
     return next(req).pipe(
         catchError((error: HttpErrorResponse) => {
+            // 401 (sessão expirada / não autenticado) é tratado pelo authInterceptor
+            if (error.status === 401) {
+                return throwError(() => error);
+            }
+
             const notificacoes = extrairNotificacoes(error);
             const detail = notificacoes.length > 0 ? notificacoes.map((notificacao) => notificacao.message).join(' ') : 'Não foi possível concluir a requisição.';
 

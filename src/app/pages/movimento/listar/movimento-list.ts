@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { ChangeDetectionStrategy, Component, OnInit, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MovimentoService } from '@/app/services/movimento.service';
@@ -12,16 +12,19 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { DialogModule } from 'primeng/dialog';
 import { FileUploadModule, FileUploadHandlerEvent } from 'primeng/fileupload';
 import { MenuModule } from 'primeng/menu';
+import { Popover, PopoverModule } from 'primeng/popover';
 import { SelectModule } from 'primeng/select';
 import { TableModule } from 'primeng/table';
 import { TagModule } from 'primeng/tag';
 import { ToolbarModule } from 'primeng/toolbar';
 import { TooltipModule } from 'primeng/tooltip';
 
+const CHAVE_MES_REFERENCIA = 'movimento-list.mesAnoReferencia';
+
 @Component({
     selector: 'app-movimento-list',
     standalone: true,
-    imports: [CommonModule, FormsModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule, DialogModule, FileUploadModule, SelectModule],
+    imports: [CommonModule, FormsModule, TableModule, TagModule, ButtonModule, ToolbarModule, TooltipModule, ConfirmDialogModule, MenuModule, DialogModule, FileUploadModule, SelectModule, PopoverModule],
     templateUrl: './movimento-list.html',
     styleUrl: './movimento-list.scss',
     changeDetection: ChangeDetectionStrategy.Eager,
@@ -33,12 +36,23 @@ export class MovimentoList implements OnInit {
     mesesReferencia = signal<{ mesAnoReferencia: string }[]>([]);
     mesReferenciaSelecionado = signal<string | null>(null);
     movimentosSelecionados = signal<any[]>([]);
+    // E-mail só pode ser enviado quando todos os movimentos selecionados estão Conferidos
+    podeEnviarEmailSelecionados = computed(() => {
+        const selecionados = this.movimentosSelecionados();
+        return selecionados.length > 0 && selecionados.every((movimento) => this.podeEnviarEmail(movimento));
+    });
+    // Movimentos com e-mail já enviado não podem ter o status alterado
+    podeAlterarStatusSelecionados = computed(() => {
+        const selecionados = this.movimentosSelecionados();
+        return selecionados.length > 0 && !selecionados.some((movimento) => this.emailEnviado(movimento));
+    });
 
     alterarStatusVisivel = signal<boolean>(false);
     novoStatus = signal<string | null>(null);
     alterandoStatus = signal<boolean>(false);
 
     solicitandoEmail = signal<boolean>(false);
+    emailSelecionado = signal<any>(null);
 
     loading = signal<boolean>(false);
 
@@ -69,7 +83,10 @@ export class MovimentoList implements OnInit {
         this.movimentoService.listarMesesReferencia().subscribe((resposta) => {
             const meses = resposta.items ?? [];
             this.mesesReferencia.set(meses);
-            this.selecionarMesReferencia(meses[0]?.mesAnoReferencia ?? null);
+            // Restaura o mês escolhido nesta sessão; se não houver (ou não existir mais na lista), usa o primeiro
+            const mesSalvo = this.lerMesReferenciaSalvo();
+            const mesInicial = meses.some((mes) => mes.mesAnoReferencia === mesSalvo) ? mesSalvo : (meses[0]?.mesAnoReferencia ?? null);
+            this.selecionarMesReferencia(mesInicial);
         });
     }
 
@@ -85,7 +102,28 @@ export class MovimentoList implements OnInit {
 
     selecionarMesReferencia(mesAnoReferencia: string | null) {
         this.mesReferenciaSelecionado.set(mesAnoReferencia);
+        this.salvarMesReferencia(mesAnoReferencia);
         this.carregarMovimentos();
+    }
+
+    private lerMesReferenciaSalvo(): string | null {
+        try {
+            return sessionStorage.getItem(CHAVE_MES_REFERENCIA);
+        } catch {
+            return null;
+        }
+    }
+
+    private salvarMesReferencia(mesAnoReferencia: string | null) {
+        try {
+            if (mesAnoReferencia) {
+                sessionStorage.setItem(CHAVE_MES_REFERENCIA, mesAnoReferencia);
+            } else {
+                sessionStorage.removeItem(CHAVE_MES_REFERENCIA);
+            }
+        } catch {
+            // sessionStorage indisponível (ex.: bloqueado pelo navegador): segue sem persistir
+        }
     }
 
     carregarMovimentos() {
@@ -124,7 +162,8 @@ export class MovimentoList implements OnInit {
             { label: 'Anexar Documentos', icon: 'pi pi-paperclip', command: () => this.abrirAnexos(movimento) },
             { label: 'Relatório Cedente', icon: 'pi pi-print', command: () => this.imprimirDemonstrativo(movimento, 1) },
             { label: 'Relatório Beneficiário', icon: 'pi pi-file-pdf', command: () => this.imprimirDemonstrativo(movimento, 0) },
-            { label: 'Enviar por E-mail', icon: 'pi pi-envelope', command: () => this.enviarPorEmail(movimento) }
+            { label: 'Enviar por E-mail', icon: 'pi pi-envelope', disabled: !this.podeEnviarEmail(movimento), title: this.motivoEmailIndisponivel(movimento), command: () => this.enviarPorEmail(movimento) },
+            { label: 'Resetar Fluxo', icon: 'pi pi-replay', visible: this.emailEnviado(movimento), styleClass: 'text-orange-500', command: () => this.resetarFluxo(movimento) }
         ];
         menu.toggle(event);
     }
@@ -230,6 +269,57 @@ export class MovimentoList implements OnInit {
         });
     }
 
+    emailEnviado(movimento: any): boolean {
+        return movimento.ultimoEmail?.status === 'Enviado';
+    }
+
+    podeEnviarEmail(movimento: any): boolean {
+        return movimento.status === 'Conferido' && !this.emailEnviado(movimento);
+    }
+
+    private motivoEmailIndisponivel(movimento: any): string | undefined {
+        if (this.emailEnviado(movimento)) {
+            return 'E-mail já enviado. Utilize "Resetar Fluxo" para reenviar.';
+        }
+
+        return movimento.status === 'Conferido' ? undefined : 'Disponível apenas para movimentos Conferidos';
+    }
+
+    resetarFluxo(movimento: any) {
+        this.confirmationService.confirm({
+            header: 'Resetar Fluxo',
+            message: `Deseja resetar o fluxo do movimento "${movimento.contrato.beneficiario.nome} - ${movimento.mesAnoReferencia}"?<br/><br/>O envio de e-mail atual será marcado como resetado (mantido no histórico) e o status do movimento voltará para <b>Não Conferido</b>.`,
+            icon: 'pi pi-exclamation-triangle',
+            acceptButtonProps: { severity: 'warn', label: 'Resetar' },
+            rejectButtonProps: { severity: 'secondary', outlined: true, label: 'Cancelar' },
+            accept: () => {
+                this.movimentoService.resetarFluxo(movimento.id).subscribe({
+                    next: (resposta) => {
+                        this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Fluxo do movimento resetado com sucesso.', life: 3000 });
+                        this.carregarMovimentos();
+                    },
+                    error: () => {}
+                });
+            }
+        });
+    }
+
+    iconeStatusEmail(status: string): string {
+        switch (status) {
+            case 'Enviado':
+                return 'pi-check-circle';
+            case 'NaoEnviado':
+                return 'pi-times-circle';
+            default:
+                return 'pi-clock';
+        }
+    }
+
+    abrirDetalheEmail(event: Event, email: any, popover: Popover) {
+        this.emailSelecionado.set(email);
+        popover.toggle(event);
+    }
+
     enviarPorEmail(movimento: any) {
         this.confirmarEnvioPorEmail([movimento]);
     }
@@ -261,7 +351,7 @@ export class MovimentoList implements OnInit {
                     next: (resposta) => {
                         this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: resposta.items?.mensagem ?? 'Envio de e-mail solicitado com sucesso.', life: 4000 });
                         this.solicitandoEmail.set(false);
-                        this.movimentosSelecionados.set([]);
+                        this.carregarMovimentos();
                     },
                     error: () => this.solicitandoEmail.set(false)
                 });

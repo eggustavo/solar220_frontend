@@ -3,13 +3,15 @@ import { MenuItem } from 'primeng/api';
 import { RouterModule } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { StyleClassModule } from 'primeng/styleclass';
+import { MenuModule } from 'primeng/menu';
+import { AuthService } from '@/app/services/auth.service';
 import { AppConfigurator } from './app.configurator';
 import { LayoutService } from '@/app/layout/service/layout.service';
 
 @Component({
     selector: 'app-topbar',
     standalone: true,
-    imports: [RouterModule, CommonModule, StyleClassModule, AppConfigurator],
+    imports: [RouterModule, CommonModule, StyleClassModule, MenuModule, AppConfigurator],
     changeDetection: ChangeDetectionStrategy.Eager,
     template: ` <div class="layout-topbar">
         <div class="layout-topbar-logo-container">
@@ -51,18 +53,21 @@ import { LayoutService } from '@/app/layout/service/layout.service';
                 </div>
             </div>
 
-            <button class="layout-topbar-menu-button layout-topbar-action" pStyleClass="@next" enterFromClass="hidden" enterActiveClass="animate-scalein" leaveToClass="hidden" leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true">
-                <i class="pi pi-ellipsis-v"></i>
+            <!-- Usuário logado: sempre visível (o texto dos botões padrão do topbar fica oculto no desktop) -->
+            <button
+                type="button"
+                class="flex items-center gap-3 border-0 bg-transparent cursor-pointer rounded-full pl-1 pr-3 py-1 text-color hover:bg-emphasis transition-colors"
+                (click)="menuUsuario.toggle($event)"
+                [attr.aria-label]="'Menu do usuário ' + (authService.usuario()?.nome ?? '')"
+            >
+                <span class="flex items-center justify-center w-9 h-9 rounded-full bg-primary text-primary-contrast font-semibold text-sm shrink-0">{{ iniciais() }}</span>
+                <span class="hidden sm:flex flex-col items-start leading-tight text-left">
+                    <span class="font-semibold max-w-48 truncate">{{ authService.usuario()?.nome }}</span>
+                    <span class="text-xs text-muted-color">{{ authService.usuario()?.tipo }}</span>
+                </span>
+                <i class="pi pi-angle-down text-muted-color text-sm"></i>
             </button>
-
-            <div class="layout-topbar-menu hidden lg:block">
-                <div class="layout-topbar-menu-content">
-                    <button type="button" class="layout-topbar-action">
-                        <i class="pi pi-user"></i>
-                        <span>Profile</span>
-                    </button>
-                </div>
-            </div>
+            <p-menu #menuUsuario [popup]="true" [model]="itensUsuario" appendTo="body" />
         </div>
     </div>`
 })
@@ -70,6 +75,26 @@ export class AppTopbar {
     items!: MenuItem[];
 
     layoutService = inject(LayoutService);
+
+    authService = inject(AuthService);
+
+    itensUsuario: MenuItem[] = [
+        { label: 'Trocar senha', icon: 'pi pi-key', routerLink: ['/trocar-senha'] },
+        { label: 'Sair', icon: 'pi pi-sign-out', command: () => this.authService.logout() }
+    ];
+
+    // Iniciais do nome (ex.: "Maria da Silva" -> "MS")
+    iniciais(): string {
+        const partes = (this.authService.usuario()?.nome ?? '').trim().split(/\s+/).filter(Boolean);
+
+        if (partes.length === 0) {
+            return '?';
+        }
+
+        const primeira = partes[0][0];
+        const ultima = partes.length > 1 ? partes[partes.length - 1][0] : '';
+        return (primeira + ultima).toUpperCase();
+    }
 
     toggleDarkMode() {
         this.layoutService.layoutConfig.update((state) => ({

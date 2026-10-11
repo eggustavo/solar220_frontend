@@ -6,8 +6,7 @@ import { environment } from '../../environments/environment';
 // Nome do EnumStatusMovimento (backend) por id retornado em /Enum/status-movimento
 const NOME_POR_ID: Record<number, string> = {
     1: 'NaoConferido',
-    2: 'Conferido',
-    3: 'EnviadoParaCliente'
+    2: 'Conferido'
 };
 
 export interface StatusMovimento {

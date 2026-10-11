@@ -44,12 +44,14 @@ export class MovimentoForm implements OnInit {
     private readonly notaFiscalTipoEmissaoService = inject(NotaFiscalTipoEmissaoService);
 
     editando = signal<boolean>(false);
+    somenteLeitura = signal<boolean>(false);
     salvando = signal<boolean>(false);
     carregando = signal<boolean>(false);
     contratos = signal<any[]>([]);
     tiposNegociacao = signal<any[]>([]);
     statusContrato = signal<any[]>([]);
     statusMovimento = signal<any[]>([]);
+    emailEnviado = signal<boolean>(false);
     bandeirasTipoCobranca = signal<any[]>([]);
     basesCalculo = signal<any[]>([]);
     tiposNotaFiscalEmissao = signal<any[]>([]);
@@ -113,6 +115,7 @@ export class MovimentoForm implements OnInit {
 
     ngOnInit() {
         this.movimentoId = this.route.snapshot.paramMap.get('id');
+        this.somenteLeitura.set(!!this.route.snapshot.data['somenteLeitura']);
         this.editando.set(!!this.movimentoId);
 
         this.tiposNegociacao.set(this.tipoNegociacaoService.listar());
@@ -146,6 +149,11 @@ export class MovimentoForm implements OnInit {
                 if (resposta.items) {
                     this.preencherFormulario(resposta.items);
                 }
+
+                // Visualização: todos os campos desabilitados (os cálculos continuam preenchendo os valores)
+                if (this.somenteLeitura()) {
+                    this.form.disable({ emitEvent: false });
+                }
                 this.carregando.set(false);
             },
             error: () => this.carregando.set(false)
@@ -153,6 +161,12 @@ export class MovimentoForm implements OnInit {
     }
 
     preencherFormulario(movimento: any) {
+        // Movimento com e-mail já enviado não pode ter o status alterado (somente via "Resetar Fluxo")
+        this.emailEnviado.set(!!movimento.emailEnviado);
+        if (movimento.emailEnviado) {
+            this.form.controls.status.disable();
+        }
+
         this.form.patchValue({
             contratoId: movimento.contratoId,
             status: movimento.status ?? null,
@@ -227,7 +241,7 @@ export class MovimentoForm implements OnInit {
     }
 
     private voltarParaListagem() {
-        this.router.navigate(['/pages/movimentos']);
+        this.router.navigate([this.route.snapshot.data['rotaVoltar'] ?? '/pages/movimentos']);
     }
 
     private aoSalvarComSucesso(mensagem: string | undefined) {
@@ -431,6 +445,10 @@ export class MovimentoForm implements OnInit {
     }
 
     cancelar() {
+        this.voltarParaListagem();
+    }
+
+    voltar() {
         this.voltarParaListagem();
     }
 }

@@ -145,6 +145,60 @@
                 </div>
             </div>
 
+            <div class="mt-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h5 class="font-bold m-0">
+                        <i class="pi pi-id-card mr-2" style="font-size: 1.25rem"></i>
+                        Usuários de Acesso
+                    </h5>
+                    @if (editando()) {
+                        <div class="flex gap-2">
+                            <button pButton type="button" severity="secondary" [outlined]="true" (click)="abrirVincularUsuario()"><i class="pi pi-link"></i>Vincular existente</button>
+                            <button pButton type="button" severity="secondary" (click)="abrirNovoUsuario()"><i class="pi pi-user-plus"></i>Novo usuário</button>
+                        </div>
+                    }
+                </div>
+
+                @if (editando()) {
+                    <p-table [value]="usuarios()" [loading]="usuariosCarregando()" [stripedRows]="true" dataKey="id" size="small">
+                        <ng-template #header>
+                            <tr>
+                                <th scope="col">Nome</th>
+                                <th scope="col">Login</th>
+                                <th scope="col">E-mail</th>
+                                <th scope="col" style="width: 10rem; text-align: center">Situação</th>
+                                <th scope="col" style="width: 4rem"></th>
+                            </tr>
+                        </ng-template>
+                        <ng-template #body let-usuario>
+                            <tr>
+                                <td>{{ usuario.nome }}</td>
+                                <td>{{ usuario.login }}</td>
+                                <td>{{ usuario.email }}</td>
+                                <td style="text-align: center">
+                                    @if (usuario.status !== 'Ativo') {
+                                        <p-tag [value]="usuario.statusDesc" severity="secondary" />
+                                    } @else if (usuario.flagTrocarSenha) {
+                                        <p-tag value="Aguardando 1º acesso" severity="warn" pTooltip="O usuário ainda está com a senha provisória enviada por e-mail" />
+                                    } @else {
+                                        <p-tag value="Ativo" severity="success" />
+                                    }
+                                </td>
+                                <td>
+                                    <button pButton type="button" [iconOnly]="true" severity="danger" [rounded]="true" [text]="true" (click)="desvincularUsuario(usuario)" pTooltip="Remover acesso"><i class="pi pi-trash"></i></button>
+                                </td>
+                            </tr>
+                        </ng-template>
+                        <ng-template #emptymessage>
+                            <tr>
+                                <td colspan="5" class="text-center text-muted-color">Nenhum usuário com acesso a este participante.</td>
+                            </tr>
+                        </ng-template>
+                    </p-table>
+                } @else {
+                    <p-message severity="secondary">Salve o participante para poder adicionar os usuários de acesso.</p-message>
+                }
+            </div>
 
             <div class="flex justify-end gap-2">
                 <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
@@ -160,3 +214,59 @@
         </div>
     </form>
 </div>
+
+<p-confirmdialog [style]="{ width: '450px' }" />
+
+<p-dialog header="Novo usuário" [visible]="novoUsuarioVisivel()" (visibleChange)="novoUsuarioVisivel.set($event)" [modal]="true" [style]="{ width: '450px' }" [breakpoints]="{ '960px': '90vw' }">
+    <form class="flex flex-col gap-4" (ngSubmit)="salvarNovoUsuario()">
+        <p class="m-0 text-muted-color text-sm">O usuário será criado com o perfil <b>Participante</b> e receberá por e-mail o login e uma senha provisória.</p>
+        <div class="flex flex-col gap-2">
+            <label for="novoUsuarioNome" class="font-medium">Nome</label>
+            <input pInputText id="novoUsuarioNome" name="nome" [(ngModel)]="novoUsuario.nome" maxlength="200" fluid />
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="novoUsuarioEmail" class="font-medium">E-mail</label>
+            <input pInputText id="novoUsuarioEmail" name="email" type="email" [(ngModel)]="novoUsuario.email" maxlength="200" fluid />
+        </div>
+        <div class="flex flex-col gap-2">
+            <label for="novoUsuarioLogin" class="font-medium">Login</label>
+            <input pInputText id="novoUsuarioLogin" name="login" [(ngModel)]="novoUsuario.login" maxlength="20" fluid />
+        </div>
+        <div class="flex justify-end gap-2 mt-2">
+            <button pButton type="button" severity="secondary" [outlined]="true" (click)="novoUsuarioVisivel.set(false)" [disabled]="salvandoUsuario()">Cancelar</button>
+            <button pButton type="submit" [loading]="salvandoUsuario()" [disabled]="!novoUsuarioValido() || salvandoUsuario()"><i class="pi pi-check"></i>Criar e enviar acesso</button>
+        </div>
+    </form>
+</p-dialog>
+
+<p-dialog header="Vincular usuário existente" [visible]="vincularUsuarioVisivel()" (visibleChange)="vincularUsuarioVisivel.set($event)" [modal]="true" [style]="{ width: '450px' }" [breakpoints]="{ '960px': '90vw' }">
+    <div class="flex flex-col gap-2">
+        <label for="usuarioExistente" class="font-medium">Usuário</label>
+        <p-select
+            inputId="usuarioExistente"
+            [(ngModel)]="usuarioSelecionadoId"
+            [options]="usuariosDisponiveis()"
+            optionValue="id"
+            optionLabel="nome"
+            [filter]="true"
+            filterBy="nome,login,email"
+            placeholder="Selecione o usuário"
+            emptyMessage="Nenhum usuário disponível"
+            emptyFilterMessage="Nenhum usuário encontrado"
+            appendTo="body"
+            fluid
+        >
+            <ng-template #item let-usuario>
+                <div class="flex flex-col">
+                    <span>{{ usuario.nome }}</span>
+                    <small class="text-muted-color">{{ usuario.login }} · {{ usuario.email }}</small>
+                </div>
+            </ng-template>
+        </p-select>
+        <small class="text-muted-color">São listados apenas usuários ativos do perfil Participante que ainda não têm acesso a este participante.</small>
+    </div>
+    <ng-template #footer>
+        <button pButton type="button" severity="secondary" [outlined]="true" (click)="vincularUsuarioVisivel.set(false)" [disabled]="salvandoUsuario()">Cancelar</button>
+        <button pButton type="button" (click)="salvarVinculo()" [loading]="salvandoUsuario()" [disabled]="!usuarioSelecionadoId || salvandoUsuario()"><i class="pi pi-link"></i>Vincular</button>
+    </ng-template>
+</p-dialog>

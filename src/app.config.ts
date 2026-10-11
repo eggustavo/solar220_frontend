@@ -7,6 +7,7 @@ import Aura from '@primeuix/themes/aura';
 import { MessageService } from 'primeng/api';
 import { providePrimeNG } from 'primeng/config';
 import { appRoutes } from './app.routes';
+import { authInterceptor } from './app/interceptors/auth.interceptor';
 import { errorInterceptor } from './app/interceptors/error.interceptor';
 import { PRIMENG_PT_BR } from './app/locale/primeng-pt-br';
 
@@ -15,7 +16,7 @@ registerLocaleData(localePtBr, 'pt-BR');
 export const appConfig: ApplicationConfig = {
     providers: [
         provideRouter(appRoutes, withInMemoryScrolling({ anchorScrolling: 'enabled', scrollPositionRestoration: 'enabled' }), withEnabledBlockingInitialNavigation()),
-        provideHttpClient(withFetch(), withInterceptors([errorInterceptor])),
+        provideHttpClient(withFetch(), withInterceptors([authInterceptor, errorInterceptor])),
         provideZonelessChangeDetection(),
         { provide: LOCALE_ID, useValue: 'pt-BR' },
         providePrimeNG(

@@ -18,6 +18,14 @@ export class MovimentoService {
         return this.http.get<RespostaApi<{ mesAnoReferencia: string }[]>>(`${this.apiUrl}/listar-meses-referencia`);
     }
 
+    listarMeusLancamentos(mesAnoReferencia: string): Observable<RespostaApi<any>> {
+        return this.http.get<RespostaApi<any>>(`${environment.apiUrl}/MeusLancamentos/listar`, { params: { MesAnoReferencia: mesAnoReferencia } });
+    }
+
+    listarMesesReferenciaMeusLancamentos(): Observable<RespostaApi<{ mesAnoReferencia: string }[]>> {
+        return this.http.get<RespostaApi<{ mesAnoReferencia: string }[]>>(`${environment.apiUrl}/MeusLancamentos/listar-meses-referencia`);
+    }
+
     obter(id: string): Observable<RespostaApi<any>> {
         return this.http.get<RespostaApi<any>>(`${this.apiUrl}/obter/${id}`);
     }
@@ -32,6 +40,10 @@ export class MovimentoService {
 
     atualizarStatus(request: { ids: string[]; status: string }): Observable<RespostaApi<any>> {
         return this.http.put<RespostaApi<any>>(`${this.apiUrl}/atualizar-status`, request);
+    }
+
+    resetarFluxo(id: string): Observable<RespostaApi<any>> {
+        return this.http.put<RespostaApi<any>>(`${this.apiUrl}/resetar-fluxo/${id}`, {});
     }
 
     excluir(id: string): Observable<RespostaApi<any>> {

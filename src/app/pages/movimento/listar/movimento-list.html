@@ -23,9 +23,14 @@
                 styleClass="w-56"
             />
         </div>
+        <button pButton severity="secondary" [outlined]="true" [iconOnly]="true" (click)="carregarMovimentos()" [disabled]="loading()" pTooltip="Atualizar lista" ariaLabel="Atualizar lista"><i class="pi pi-refresh"></i></button>
         @if (movimentosSelecionados().length > 0) {
-            <button pButton severity="secondary" (click)="abrirAlterarStatus()"><i class="pi pi-sync"></i>Alterar Status ({{ movimentosSelecionados().length }})</button>
-            <button pButton severity="secondary" (click)="enviarSelecionadosPorEmail()" [disabled]="solicitandoEmail()"><i class="pi pi-envelope"></i>Enviar por E-mail ({{ movimentosSelecionados().length }})</button>
+            @if (podeAlterarStatusSelecionados()) {
+                <button pButton severity="secondary" (click)="abrirAlterarStatus()"><i class="pi pi-sync"></i>Alterar Status ({{ movimentosSelecionados().length }})</button>
+            }
+            @if (podeEnviarEmailSelecionados()) {
+                <button pButton severity="secondary" (click)="enviarSelecionadosPorEmail()" [disabled]="solicitandoEmail()"><i class="pi pi-envelope"></i>Enviar por E-mail ({{ movimentosSelecionados().length }})</button>
+            }
         }
     </div>
     <p-table #dt [value]="movimentos()" [selection]="movimentosSelecionados()" (selectionChange)="movimentosSelecionados.set($event)" [loading]="loading()" [stripedRows]="true" [rowHover]="true" [paginator]="true" [rows]="10" dataKey="id">
@@ -37,6 +42,7 @@
                 <th scope="col" style="width: 25rem">Beneficiário</th>
                 <th scope="col" style="width: 25rem">Cedente</th>
                 <th scope="col" style="width: 12rem; text-align: center">Status</th>
+                <th scope="col" style="width: 13rem; text-align: center">E-mail</th>
                 <th scope="col" style="width: 5rem">Ações</th>
             </tr>
             <tr>
@@ -73,7 +79,37 @@
                     <div class="text-sm font-bold">UC: {{ movimento.contrato.cedenteNumeroUc }}</div>
                 </td>
                 <td style="text-align: center">
-                    <p-tag [value]="movimento.statusDesc" severity="info" [class.status-nao-conferido]="movimento.status === 'NaoConferido'" [class.status-conferido]="movimento.status === 'Conferido'" />
+                    <p-tag [value]="movimento.statusDesc" [class.status-nao-conferido]="movimento.status === 'NaoConferido'" [class.status-conferido]="movimento.status === 'Conferido'" />
+                </td>
+                <td style="text-align: center">
+                    @if (movimento.ultimoEmail; as email) {
+                        <button type="button" [class]="'email-status email-status--' + email.status" (click)="abrirDetalheEmail($event, email, detalheEmail)" pTooltip="Ver detalhes do envio" tooltipPosition="top">
+                            <span class="email-status__badge">
+                                <i [class]="'pi ' + iconeStatusEmail(email.status)"></i>
+                                {{ email.statusDesc }}
+                            </span>
+                            <span class="email-status__data">
+                                @switch (email.status) {
+                                    @case ('Pendente') {
+                                        @if (email.quantidadeTentativas > 0) {
+                                            Tentativa {{ email.quantidadeTentativas }}/3 falhou
+                                        } @else {
+                                            Solicitado {{ email.data | date: 'dd/MM HH:mm' }}
+                                        }
+                                    }
+                                    @default {
+                                        @if (email.dataUltimaTentativa) {
+                                            {{ email.dataUltimaTentativa | date: 'dd/MM/yyyy HH:mm' }}
+                                        } @else {
+                                            Cancelado
+                                        }
+                                    }
+                                }
+                            </span>
+                        </button>
+                    } @else {
+                        <span class="text-surface-400 text-sm">Não enviado</span>
+                    }
                 </td>
                 <td>
                     <button pButton [iconOnly]="true" severity="secondary" [rounded]="true" [text]="true" (click)="abrirMenuAcoes($event, movimento, acoesMenu)" pTooltip="Ações"><i class="pi pi-ellipsis-v"></i></button>
@@ -82,11 +118,34 @@
         </ng-template>
         <ng-template #emptymessage>
             <tr>
-                <td colspan="5" class="text-center">Nenhum lançamento encontrado.</td>
+                <td colspan="6" class="text-center">Nenhum lançamento encontrado.</td>
             </tr>
         </ng-template>
     </p-table>
     <p-menu #acoesMenu [popup]="true" [model]="menuItems" appendTo="body" />
+    <p-popover #detalheEmail appendTo="body">
+        @if (emailSelecionado(); as email) {
+            <div class="email-detalhe">
+                <div class="flex items-center justify-between gap-4 mb-3">
+                    <span class="font-semibold">Envio de e-mail</span>
+                    <span [class]="'email-status__badge email-status--' + email.status"><i [class]="'pi ' + iconeStatusEmail(email.status)"></i>{{ email.statusDesc }}</span>
+                </div>
+                <dl class="email-detalhe__lista">
+                    <dt>Solicitado em</dt>
+                    <dd>{{ email.data | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+                    <dt>Última tentativa</dt>
+                    <dd>{{ email.dataUltimaTentativa ? (email.dataUltimaTentativa | date: 'dd/MM/yyyy HH:mm:ss') : '—' }}</dd>
+                    <dt>Tentativas</dt>
+                    <dd>{{ email.quantidadeTentativas }} de 3</dd>
+                </dl>
+                @if (email.mensagem) {
+                    <div [class]="'email-detalhe__mensagem email-detalhe__mensagem--' + email.status">{{ email.mensagem }}</div>
+                } @else if (email.status === 'Pendente') {
+                    <div class="email-detalhe__mensagem email-detalhe__mensagem--Pendente">Aguardando processamento. O envio é realizado em até 5 minutos.</div>
+                }
+            </div>
+        }
+    </p-popover>
 </div>
 
 <p-confirmdialog [style]="{ width: '450px' }" />

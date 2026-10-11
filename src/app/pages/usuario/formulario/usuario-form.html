@@ -1,0 +1,70 @@
+<div class="card">
+    <h5 class="m-0 mb-4">{{ editando() ? 'Editar Usuário' : 'Novo Usuário' }}</h5>
+
+    <form [formGroup]="form" (ngSubmit)="salvar()">
+        <div class="flex flex-col gap-6">
+            @if (!editando()) {
+                <p-message severity="info">Uma senha provisória será gerada e enviada para o e-mail informado. No primeiro acesso, o usuário deverá cadastrar uma nova senha.</p-message>
+            }
+
+            <div class="grid grid-cols-12 gap-4">
+                <div class="col-span-12 md:col-span-6">
+                    <label for="nome" class="block mb-2">Nome</label>
+                    <input id="nome" type="text" pInputText formControlName="nome" maxlength="200" fluid />
+                    @if (form.controls.nome.invalid && form.controls.nome.touched) {
+                        <small class="text-red-500">Campo obrigatório.</small>
+                    }
+                </div>
+                <div class="col-span-12 md:col-span-6">
+                    <label for="email" class="block mb-2">E-mail</label>
+                    <input id="email" type="email" pInputText formControlName="email" maxlength="200" fluid />
+                    @if (form.controls.email.invalid && form.controls.email.touched) {
+                        <small class="text-red-500">Informe um e-mail válido.</small>
+                    }
+                </div>
+                <div class="col-span-12 md:col-span-4">
+                    <label for="login" class="block mb-2">Login</label>
+                    <input id="login" type="text" pInputText formControlName="login" maxlength="20" fluid />
+                    @if (form.controls.login.invalid && form.controls.login.touched) {
+                        <small class="text-red-500">Campo obrigatório (até 20 caracteres).</small>
+                    }
+                </div>
+                <div class="col-span-12 md:col-span-4">
+                    <label for="tipo" class="block mb-2">Perfil</label>
+                    <p-select inputId="tipo" formControlName="tipo" [options]="tiposUsuario()" optionLabel="descricao" optionValue="id" placeholder="Selecione o perfil" appendTo="body" fluid />
+                    @if (form.controls.tipo.invalid && form.controls.tipo.touched) {
+                        <small class="text-red-500">Campo obrigatório.</small>
+                    }
+                </div>
+                @if (editando()) {
+                    <div class="col-span-12 md:col-span-4">
+                        <label for="status" class="block mb-2">Situação</label>
+                        <p-select inputId="status" formControlName="status" [options]="statusUsuario()" optionLabel="descricao" optionValue="id" appendTo="body" fluid />
+                    </div>
+                }
+                @if (proprioUsuario()) {
+                    <div class="col-span-12">
+                        <small class="text-muted-color"><i class="pi pi-lock text-xs"></i> Você não pode alterar o seu próprio perfil nem inativar o seu próprio usuário.</small>
+                    </div>
+                }
+            </div>
+
+            <div class="text-sm text-muted-color">
+                <i class="pi pi-info-circle text-xs"></i>
+                <b>Administrador:</b> acesso a todas as telas · <b>Operador:</b> Lançamentos · <b>Participante:</b> Meus Lançamentos (o vínculo com os participantes é feito no cadastro do participante).
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button pButton type="button" severity="secondary" outlined (click)="cancelar()"><i class="pi pi-times"></i>Cancelar</button>
+                <button pButton type="submit" [disabled]="salvando() || carregando()">
+                    @if (salvando()) {
+                        <i class="pi pi-spin pi-spinner"></i>
+                    } @else {
+                        <i class="pi pi-check"></i>
+                    }
+                    Salvar
+                </button>
+            </div>
+        </div>
+    </form>
+</div>

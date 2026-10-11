@@ -1,4 +1,6 @@
 import { Component, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { AuthService } from '@/app/services/auth.service';
+import { PerfilUsuario } from '@/app/models/usuario-logado.model';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
@@ -22,11 +24,25 @@ import { AppMenuitem } from './app.menuitem';
 export class AppMenu implements OnInit {
     model: MenuItem[] = [];
 
+    constructor(private readonly authService: AuthService) {}
+
     ngOnInit() {
-        this.model = [
+        this.model = this.filtrarPorPerfil(this.montarMenu());
+    }
+
+    // Mantém somente os itens permitidos ao perfil do usuário (state.perfis) e remove grupos que ficarem vazios
+    private filtrarPorPerfil(itens: MenuItem[]): MenuItem[] {
+        return itens
+            .filter((item) => !item.state?.['perfis'] || this.authService.possuiPerfil(item.state['perfis'] as PerfilUsuario[]))
+            .map((item) => (item.items ? { ...item, items: this.filtrarPorPerfil(item.items) } : item))
+            .filter((item) => !item.items || item.items.length > 0);
+    }
+
+    private montarMenu(): MenuItem[] {
+        return [
             {
                 label: 'Home',
-                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/'] }]
+                items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', routerLink: ['/'], state: { perfis: ['Administrador'] } }]
             },
             {
                 label: 'Cadastros',
@@ -36,12 +52,20 @@ export class AppMenu implements OnInit {
                     {
                         label: 'Participantes',
                         icon: 'pi pi-fw pi-users',
-                        routerLink: ['/pages/participantes']
+                        routerLink: ['/pages/participantes'],
+                        state: { perfis: ['Administrador'] }
                     },
                     {
                         label: 'Contratos',
                         icon: 'pi pi-fw pi-file',
-                        routerLink: ['/pages/contratos']
+                        routerLink: ['/pages/contratos'],
+                        state: { perfis: ['Administrador'] }
+                    },
+                    {
+                        label: 'Usuários',
+                        icon: 'pi pi-fw pi-id-card',
+                        routerLink: ['/pages/usuarios'],
+                        state: { perfis: ['Administrador'] }
                     }
                 ]
             },
@@ -53,7 +77,14 @@ export class AppMenu implements OnInit {
                     {
                         label: 'Lançamentos',
                         icon: 'pi pi-fw pi-users',
-                        routerLink: ['/pages/movimentos']
+                        routerLink: ['/pages/movimentos'],
+                        state: { perfis: ['Operador'] }
+                    },
+                    {
+                        label: 'Meus Lançamentos',
+                        icon: 'pi pi-fw pi-list',
+                        routerLink: ['/pages/meus-lancamentos'],
+                        state: { perfis: ['Participante'] }
                     }
                 ]
             }            
